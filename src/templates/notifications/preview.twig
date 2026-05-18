@@ -1,0 +1,25 @@
+{% extends "_layouts/cp" %}
+
+{% set title = "Preview: {title}"|t('super-mailer', { title: notification.title }) %}
+{% set selectedNavItem = 'super-mailer' %}
+{% set selectedSubnavItem = 'notifications' %}
+{% set crumbs = [
+    { label: "Notifications"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
+    { label: notification.title, url: notification.cpEditUrl },
+] %}
+
+{% block content %}
+    <h2>{{ "Subject"|t('super-mailer') }}</h2>
+    <p><code>{{ preview.subject }}</code></p>
+
+    {% if preview.html %}
+        <h2>{{ "HTML Body"|t('super-mailer') }}</h2>
+        <iframe title="{{ 'HTML preview'|t('super-mailer') }}" srcdoc="{{ preview.html|e('html_attr') }}" style="width:100%;min-height:420px;border:1px solid var(--hairline-color);border-radius:4px;background:#fff;"></iframe>
+    {% endif %}
+
+    <h2>{{ "Plain Text Body"|t('super-mailer') }}</h2>
+    <pre style="white-space:pre-wrap;">{{ preview.text }}</pre>
+
+    <h2>{{ "Sample Event Context"|t('super-mailer') }}</h2>
+    <pre style="white-space:pre-wrap;">{{ preview.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+{% endblock %}

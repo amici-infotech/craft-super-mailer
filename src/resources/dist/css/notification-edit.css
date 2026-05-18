@@ -1,0 +1,209 @@
+.super-mailer-event-results {
+    position: relative;
+    z-index: 10;
+    max-height: 320px;
+    overflow: auto;
+    margin-top: 6px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 5px;
+    background: var(--body-bg-color);
+    box-shadow: 0 8px 22px rgb(31 41 51 / 18%);
+}
+
+.super-mailer-event-option {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--hairline-color);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.super-mailer-event-option:last-child {
+    border-bottom: 0;
+}
+
+.super-mailer-event-option:hover,
+.super-mailer-event-option:focus {
+    background: var(--gray-050);
+}
+
+.super-mailer-event-option strong,
+.super-mailer-selected-event strong {
+    display: block;
+    margin-bottom: 2px;
+}
+
+.super-mailer-event-option code,
+.super-mailer-selected-event code {
+    font-size: 11px;
+}
+
+.super-mailer-code-generator {
+    margin: 18px 0 24px;
+    padding: 0;
+    border: 1px solid var(--hairline-color);
+    border-radius: 10px;
+    background: var(--body-bg-color);
+    box-shadow: 0 12px 28px rgb(31 41 51 / 12%);
+    overflow: hidden;
+}
+
+.super-mailer-generator-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--hairline-color);
+    background: linear-gradient(135deg, rgb(9 89 133 / 10%), rgb(245 165 36 / 10%));
+}
+
+.super-mailer-generator-eyebrow {
+    margin-bottom: 4px;
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.super-mailer-selected-event {
+    max-width: 100%;
+}
+
+.super-mailer-selected-event strong {
+    font-size: 15px;
+}
+
+.super-mailer-selected-event code {
+    display: inline-block;
+    margin-top: 5px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgb(9 89 133 / 12%);
+    color: #095985;
+}
+
+.super-mailer-code-section {
+    padding: 18px 20px 8px;
+    background: #111827;
+}
+
+.super-mailer-section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.super-mailer-code-section .super-mailer-section-heading h3,
+.super-mailer-code-section .super-mailer-section-heading span {
+    color: #e5e7eb;
+}
+
+.super-mailer-section-heading h3 {
+    margin: 0;
+}
+
+.super-mailer-section-heading span {
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.super-mailer-code-block {
+    overflow: auto;
+    margin: 0;
+    padding: 18px;
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 8px;
+    background: #0b1020;
+    color: #dbeafe;
+    white-space: pre;
+    tab-size: 4;
+}
+
+.super-mailer-php-code {
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.super-mailer-token-keyword {
+    color: #c084fc;
+    font-weight: 700;
+}
+
+.super-mailer-token-class {
+    color: #7dd3fc;
+}
+
+.super-mailer-token-constant {
+    color: #fde68a;
+}
+
+.super-mailer-token-variable {
+    color: #34d399;
+    font-weight: 700;
+}
+
+.super-mailer-token-string {
+    color: #fca5a5;
+}
+
+.super-mailer-token-comment {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.super-mailer-token-function {
+    color: #93c5fd;
+}
+
+.super-mailer-token-punctuation {
+    color: #bfdbfe;
+}
+
+.super-mailer-event-variables {
+    margin: 0;
+    padding: 0 20px 22px;
+    list-style: none;
+}
+
+.super-mailer-event-variables li {
+    padding: 11px 0;
+    border-bottom: 1px solid var(--hairline-color);
+}
+
+.super-mailer-event-variables li:first-child {
+    border-top: 1px solid var(--hairline-color);
+}
+
+.super-mailer-event-variables li:last-child {
+    border-bottom: 0;
+}
+
+.super-mailer-variables-heading {
+    margin: 20px 20px 12px;
+}
+
+.super-mailer-event-variables code {
+    color: #047857;
+    font-weight: 700;
+}
+
+.super-mailer-variable-type {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgb(9 89 133 / 12%);
+    color: #095985;
+    font-size: 10px;
+    font-weight: 700;
+}

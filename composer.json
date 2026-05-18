@@ -1,0 +1,39 @@
+{
+    "name": "amici/craft-super-mailer",
+    "description": "Create event-driven email notifications for Craft CMS.",
+    "version": "5.0.0",
+    "type": "craft-plugin",
+    "keywords": ["craft", "cms", "craftcms", "craft-plugin", "email", "mailer", "notifications", "events"],
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Amici Infotech",
+            "homepage": "https://amiciinfotech.com"
+        }
+    ],
+    "support": {
+        "email": "contact@amiciinfotech.com",
+        "issues": "https://github.com/amici-infotech/craft-super-mailer/issues?state=open",
+        "source": "https://github.com/amici-infotech/craft-super-mailer",
+        "docs": "https://docs.amiciinfotech.com/craft-cms/super-mailer"
+    },
+    "require": {
+        "php": "^8.2 || ^8.3 || ^8.4",
+        "craftcms/cms": "^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "amici\\SuperMailer\\": "src/"
+        }
+    },
+    "extra": {
+        "handle": "super-mailer",
+        "name": "Super Mailer",
+        "description": "Create event-driven email notifications for Craft CMS.",
+        "developer": "Amici Infotech",
+        "developerUrl": "https://amiciinfotech.com",
+        "documentationUrl": "https://docs.amiciinfotech.com/craft-cms/super-mailer",
+        "changelogUrl": "https://github.com/amici-infotech/craft-super-mailer/CHANGELOG.md",
+        "class": "amici\\SuperMailer\\Plugin"
+    }
+}

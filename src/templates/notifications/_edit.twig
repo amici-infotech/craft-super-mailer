@@ -1,0 +1,221 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set title = notification.id ? notification.title : "New Notification"|t('super-mailer') %}
+{% set fullPageForm = true %}
+{% set selectedNavItem = 'super-mailer' %}
+{% set selectedSubnavItem = 'notifications' %}
+{% set saveShortcutRedirect = 'super-mailer/notifications/{id}' %}
+{% do view.registerAssetBundle('amici\\SuperMailer\\assetbundles\\NotificationEditAsset') %}
+
+{% block content %}
+    {{ actionInput('super-mailer/notification/save') }}
+    {{ redirectInput('super-mailer/notifications') }}
+
+    {% if notification.id %}
+        {{ hiddenInput('id', notification.id) }}
+    {% endif %}
+
+    {{ forms.textField({
+        first: true,
+        label: "Title"|t('super-mailer'),
+        instructions: "A label for this notification in the control panel."|t('super-mailer'),
+        id: 'title',
+        name: 'title',
+        value: notification.title,
+        errors: notification.getErrors('title'),
+        autofocus: true,
+        required: true
+    }) }}
+
+    {{ forms.textField({
+        label: "Handle"|t('super-mailer'),
+        instructions: "A unique handle for this notification."|t('super-mailer'),
+        id: 'handle',
+        name: 'handle',
+        class: 'code ltr',
+        autocomplete: false,
+        value: notification.handle,
+        errors: notification.getErrors('handle'),
+        required: true
+    }) }}
+
+    <hr>
+
+    <div class="field{% if notification.getErrors('eventName') %} errors{% endif %}">
+        <div class="heading">
+            <label for="eventSearch" class="required">{{ "Event"|t('super-mailer') }}</label>
+        </div>
+        <div class="instructions">
+            <p>{{ "Start typing a class, event constant, or event name, then choose the event that should trigger this email."|t('super-mailer') }}</p>
+        </div>
+        <div class="input ltr">
+            {{ hiddenInput('eventValue', eventValue, { id: 'eventValue' }) }}
+            <script type="application/json" id="superMailerEventPickerData">{{ {
+                events: eventOptions,
+                currentValue: eventValue,
+                noMatchesLabel: "No matching events found."|t('super-mailer'),
+                copiedLabel: "Copied"|t('super-mailer')
+            }|json_encode|raw }}</script>
+            {{ tag('input', {
+                type: 'text',
+                id: 'eventSearch',
+                class: 'text fullwidth code',
+                autocomplete: 'off',
+                placeholder: 'craft\\services\\Elements::EVENT_AFTER_SAVE_ELEMENT',
+                value: ''
+            }) }}
+            <div id="eventAutocompleteResults" class="super-mailer-event-results hidden"></div>
+        </div>
+        {% if notification.getErrors('eventName') %}
+            <ul class="errors">
+                {% for error in notification.getErrors('eventName') %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div id="eventCodeGenerator" class="super-mailer-code-generator hidden">
+        <div class="super-mailer-generator-header">
+            <div>
+                <div class="super-mailer-generator-eyebrow">{{ "Selected Event"|t('super-mailer') }}</div>
+                <div class="super-mailer-selected-event"></div>
+            </div>
+            <button type="button" id="copyEventCode" class="btn small">{{ "Copy Code"|t('super-mailer') }}</button>
+        </div>
+
+        <div class="super-mailer-code-section">
+            <div class="super-mailer-section-heading">
+                <h3>{{ "Example Listener Code"|t('super-mailer') }}</h3>
+                <span>{{ "PHP"|t('super-mailer') }}</span>
+            </div>
+            <pre class="super-mailer-code-block"><code id="eventExampleCode" class="super-mailer-php-code"></code></pre>
+        </div>
+
+        <div class="super-mailer-section-heading super-mailer-variables-heading">
+            <h3>{{ "Available $event Variables"|t('super-mailer') }}</h3>
+            <span>{{ "From callback event type"|t('super-mailer') }}</span>
+        </div>
+        <div id="eventVariableList"></div>
+    </div>
+
+    <hr>
+
+    {{ forms.textareaField({
+        label: "Send Emails"|t('super-mailer'),
+        instructions: "Comma-separated email addresses. Twig is supported, for example: {{ event.element.author.email ?? 'admin@example.com' }}."|t('super-mailer'),
+        id: 'toEmails',
+        name: 'toEmails',
+        value: notification.toEmails,
+        errors: notification.getErrors('toEmails'),
+        rows: 3,
+        required: true
+    }) }}
+
+    {{ forms.textareaField({
+        label: "CC Emails"|t('super-mailer'),
+        instructions: "Optional comma-separated email addresses. Twig is supported."|t('super-mailer'),
+        id: 'ccEmails',
+        name: 'ccEmails',
+        value: notification.ccEmails,
+        errors: notification.getErrors('ccEmails'),
+        rows: 2
+    }) }}
+
+    {{ forms.textareaField({
+        label: "BCC Emails"|t('super-mailer'),
+        instructions: "Optional comma-separated email addresses. Twig is supported."|t('super-mailer'),
+        id: 'bccEmails',
+        name: 'bccEmails',
+        value: notification.bccEmails,
+        errors: notification.getErrors('bccEmails'),
+        rows: 2
+    }) }}
+
+    <hr>
+
+    {{ forms.autosuggestField({
+        label: "From Email"|t('super-mailer'),
+        instructions: "Leave blank to use Craft's system from email."|t('super-mailer'),
+        id: 'fromEmail',
+        name: 'fromEmail',
+        suggestEnvVars: true,
+        value: notification.fromEmail,
+        errors: notification.getErrors('fromEmail')
+    }) }}
+
+    {{ forms.autosuggestField({
+        label: "From Name"|t('super-mailer'),
+        instructions: "Leave blank to use Craft's system from name."|t('super-mailer'),
+        id: 'fromName',
+        name: 'fromName',
+        suggestEnvVars: true,
+        value: notification.fromName,
+        errors: notification.getErrors('fromName')
+    }) }}
+
+    {{ forms.textField({
+        label: "Reply To"|t('super-mailer'),
+        instructions: "Optional reply-to email address."|t('super-mailer'),
+        id: 'replyTo',
+        name: 'replyTo',
+        value: notification.replyTo,
+        errors: notification.getErrors('replyTo')
+    }) }}
+
+    {{ forms.textField({
+        label: "Email Subject"|t('super-mailer'),
+        instructions: "Twig is supported, for example: Entry changed: {{ event.element.title ?? 'Element' }}."|t('super-mailer'),
+        id: 'emailSubject',
+        name: 'emailSubject',
+        value: notification.emailSubject,
+        errors: notification.getErrors('emailSubject'),
+        required: true
+    }) }}
+
+    {{ forms.autosuggestField({
+        label: "HTML Email Template Path"|t('super-mailer'),
+        instructions: "Optional template path relative to the site templates folder."|t('super-mailer'),
+        id: 'htmlTemplatePath',
+        name: 'htmlTemplatePath',
+        suggestTemplates: true,
+        value: notification.htmlTemplatePath,
+        errors: notification.getErrors('htmlTemplatePath'),
+        placeholder: '_emails/notification-html'
+    }) }}
+
+    {{ forms.autosuggestField({
+        label: "Plain Text Email Template Path"|t('super-mailer'),
+        instructions: "Optional template path relative to the site templates folder."|t('super-mailer'),
+        id: 'plainTextTemplatePath',
+        name: 'plainTextTemplatePath',
+        suggestTemplates: true,
+        value: notification.plainTextTemplatePath,
+        errors: notification.getErrors('plainTextTemplatePath'),
+        placeholder: '_emails/notification-text'
+    }) }}
+{% endblock %}
+
+{% block details %}
+    <div class="meta">
+        {{ forms.lightswitchField({
+            label: "Enabled"|t('app'),
+            id: 'enabledNotification',
+            name: 'enabledNotification',
+            value: 1,
+            on: notification.enabledNotification
+        }) }}
+    </div>
+
+    {% if notification.id %}
+        <hr>
+        <div class="meta">
+            <div class="data">
+                <h5 class="heading">{{ "Preview URL"|t('super-mailer') }}</h5>
+                <div class="value"><a href="{{ notification.previewUrl }}" target="_blank">{{ "Preview email"|t('super-mailer') }}</a></div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
