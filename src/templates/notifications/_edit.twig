@@ -54,6 +54,11 @@
             <script type="application/json" id="superMailerEventPickerData">{{ {
                 events: eventOptions,
                 currentValue: eventValue,
+                conditionRules: notification.normalizedConditionRules(),
+                conditionFieldOptions: conditionFieldOptions,
+                conditionSuggestions: conditionSuggestions,
+                conditionMatchModeLabel: (notification.conditionMatchMode ?? 'all') == 'any' ? "Any condition can match"|t('super-mailer') : "All conditions must match"|t('super-mailer'),
+                phpCondition: notification.phpCondition,
                 noMatchesLabel: "No matching events found."|t('super-mailer'),
                 copiedLabel: "Copied"|t('super-mailer')
             }|json_encode|raw }}</script>
@@ -100,6 +105,83 @@
         <div id="eventVariableList"></div>
     </div>
 
+    <hr>
+
+    {{ forms.selectField({
+        label: "Condition Match Mode"|t('super-mailer'),
+        instructions: "Choose whether all condition rows must match, or any one row can match. Leave the table empty to always send for this event."|t('super-mailer'),
+        id: 'conditionMatchMode',
+        name: 'conditionMatchMode',
+        options: [
+            { label: "All conditions must match"|t('super-mailer'), value: 'all' },
+            { label: "Any condition can match"|t('super-mailer'), value: 'any' }
+        ],
+        value: notification.conditionMatchMode ?? 'all',
+        errors: notification.getErrors('conditionMatchMode')
+    }) }}
+
+    <div class="field">
+        <div class="heading">
+            <label>{{ "Conditions"|t('super-mailer') }}</label>
+        </div>
+        <div class="instructions">
+            <p>{{ "Add optional rules that must pass before this notification sends. Use the custom PHP condition below for more advanced logic."|t('super-mailer') }}</p>
+        </div>
+        <div class="input">
+            <div class="super-mailer-condition-builder">
+                <div class="super-mailer-condition-header" aria-hidden="true">
+                    <div>{{ "Condition"|t('super-mailer') }}</div>
+                    <div>{{ "Comparison"|t('super-mailer') }}</div>
+                    <div>{{ "Value"|t('super-mailer') }}</div>
+                    <div></div>
+                </div>
+                <div id="conditionRulesTable" class="super-mailer-condition-list">
+                    {% for rule in notification.normalizedConditionRules() %}
+                        <div class="super-mailer-condition-row" data-condition-row>
+                            <div class="super-mailer-condition-cell super-mailer-condition-field-cell">
+                                {{ forms.select({
+                                    name: "conditionRules[#{loop.index0}][field]",
+                                    options: conditionFieldOptions,
+                                    value: rule.field ?? '',
+                                    class: 'fullwidth',
+                                    inputAttributes: {
+                                        class: 'super-mailer-condition-field-input'
+                                    }
+                                }) }}
+                            </div>
+                            <div class="super-mailer-condition-cell super-mailer-condition-operator" data-operator-cell>
+                                {{ hiddenInput("conditionRules[#{loop.index0}][operator]", rule.operator ?? 'equals') }}
+                                <span class="light">{{ "is"|t('super-mailer') }}</span>
+                            </div>
+                            <div class="super-mailer-condition-cell super-mailer-condition-value" data-value-cell>
+                                {{ forms.text({
+                                    name: "conditionRules[#{loop.index0}][value]",
+                                    value: rule.value ?? '',
+                                    class: 'text fullwidth'
+                                }) }}
+                            </div>
+                            <div class="super-mailer-condition-cell super-mailer-condition-actions">
+                                <button type="button" class="delete icon super-mailer-condition-remove" data-remove-condition title="{{ 'Remove'|t('app') }}"></button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="button" id="addConditionRule" class="btn add icon">{{ "Add condition"|t('super-mailer') }}</button>
+        </div>
+    </div>
+
+    {{ forms.textareaField({
+        label: "Custom PHP Condition"|t('super-mailer'),
+        instructions: "Optional advanced condition. Enter only the PHP expression that would go inside an if statement, for example: ($event->sender->myField->value ?? null) === 'gold'."|t('super-mailer'),
+        id: 'phpCondition',
+        name: 'phpCondition',
+        value: notification.phpCondition,
+        errors: notification.getErrors('phpCondition'),
+        rows: 4,
+        class: 'code ltr',
+        placeholder: "($event->sender->myField->value ?? null) === 'gold'"
+    }) }}
     <hr>
 
     {{ forms.textareaField({

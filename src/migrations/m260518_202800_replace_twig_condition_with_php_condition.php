@@ -1,0 +1,47 @@
+<?php
+namespace amici\SuperMailer\migrations;
+
+use craft\db\Migration;
+
+class m260518_202800_replace_twig_condition_with_php_condition extends Migration
+{
+    public function safeUp(): bool
+    {
+        $table = '{{%super_mailer_notifications}}';
+
+        if ($this->db->columnExists($table, 'twigCondition') && !$this->db->columnExists($table, 'phpCondition')) {
+            $this->renameColumn($table, 'twigCondition', 'phpCondition');
+            return true;
+        }
+
+        if (!$this->db->columnExists($table, 'phpCondition')) {
+            $this->addColumn($table, 'phpCondition', $this->text()->after('conditionRules'));
+        }
+
+        if ($this->db->columnExists($table, 'twigCondition')) {
+            $this->dropColumn($table, 'twigCondition');
+        }
+
+        return true;
+    }
+
+    public function safeDown(): bool
+    {
+        $table = '{{%super_mailer_notifications}}';
+
+        if ($this->db->columnExists($table, 'phpCondition') && !$this->db->columnExists($table, 'twigCondition')) {
+            $this->renameColumn($table, 'phpCondition', 'twigCondition');
+            return true;
+        }
+
+        if (!$this->db->columnExists($table, 'twigCondition')) {
+            $this->addColumn($table, 'twigCondition', $this->text()->after('conditionRules'));
+        }
+
+        if ($this->db->columnExists($table, 'phpCondition')) {
+            $this->dropColumn($table, 'phpCondition');
+        }
+
+        return true;
+    }
+}

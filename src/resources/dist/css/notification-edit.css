@@ -207,3 +207,136 @@
     font-size: 10px;
     font-weight: 700;
 }
+
+.super-mailer-condition-builder {
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+    background: var(--body-bg-color);
+    overflow: visible;
+}
+
+.super-mailer-condition-header,
+.super-mailer-condition-row {
+    display: grid;
+    grid-template-columns: minmax(190px, .9fr) 104px minmax(280px, 1.2fr) 40px;
+    align-items: center;
+    column-gap: 12px;
+}
+
+.super-mailer-condition-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hairline-color);
+    background: var(--gray-050);
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.super-mailer-condition-list {
+    margin-bottom: 12px;
+}
+
+.super-mailer-condition-row {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--hairline-color);
+}
+
+.super-mailer-condition-row:last-child {
+    border-bottom: 0;
+}
+
+.super-mailer-condition-row:hover {
+    background: var(--gray-050);
+}
+
+.super-mailer-condition-cell {
+    min-width: 0;
+}
+
+.super-mailer-condition-field-cell .select {
+    width: 100%;
+}
+
+.super-mailer-condition-operator {
+    color: var(--gray-600);
+}
+
+.super-mailer-condition-remove {
+    flex: 0 0 auto;
+}
+
+.super-mailer-author-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.super-mailer-author-label {
+    overflow: hidden;
+    color: var(--gray-600);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.super-mailer-condition-text {
+    min-height: 34px;
+}
+
+.super-mailer-author-tokens {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.super-mailer-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    padding: 3px 7px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 3px;
+    background: var(--gray-100);
+    color: var(--text-color);
+    font-size: 12px;
+    line-height: 18px;
+}
+
+.super-mailer-token button {
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.super-mailer-token button::before {
+    display: block;
+    color: var(--gray-600);
+    content: "×";
+    font-size: 14px;
+    line-height: 12px;
+}
+
+.super-mailer-author-picker {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+    .super-mailer-condition-header {
+        display: none;
+    }
+
+    .super-mailer-condition-row {
+        display: block;
+    }
+
+    .super-mailer-condition-cell + .super-mailer-condition-cell {
+        margin-top: 8px;
+    }
+}

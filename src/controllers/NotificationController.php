@@ -52,6 +52,8 @@ class NotificationController extends Controller
             'isNew' => !$notification->id,
             'eventOptions' => Plugin::getInstance()->getEvents()->getSelectOptions(),
             'eventValue' => $eventValue,
+            'conditionFieldOptions' => $this->conditionFieldOptions(),
+            'conditionSuggestions' => $this->conditionSuggestions(),
         ]);
     }
 
@@ -93,6 +95,9 @@ class NotificationController extends Controller
         $notification->emailSubject = $request->getBodyParam('emailSubject');
         $notification->htmlTemplatePath = $request->getBodyParam('htmlTemplatePath');
         $notification->plainTextTemplatePath = $request->getBodyParam('plainTextTemplatePath');
+        $notification->conditionMatchMode = $request->getBodyParam('conditionMatchMode', 'all');
+        $notification->conditionRules = $request->getBodyParam('conditionRules', []);
+        $notification->phpCondition = $request->getBodyParam('phpCondition');
         $notification->enabledNotification = (bool)$request->getBodyParam('enabledNotification', false);
         $notification->setScenario(Element::SCENARIO_LIVE);
 
@@ -156,5 +161,58 @@ class NotificationController extends Controller
             'notification' => $notification,
             'preview' => Plugin::getInstance()->getMailer()->preview($notification),
         ]);
+    }
+
+    private function conditionFieldOptions(): array
+    {
+        $options = [
+            ['label' => Craft::t('super-mailer', 'Status'), 'value' => 'element.status'],
+            ['label' => Craft::t('super-mailer', 'Site ID'), 'value' => 'element.siteId'],
+            ['label' => Craft::t('super-mailer', 'Section Handle'), 'value' => 'entry.section.handle'],
+            ['label' => Craft::t('super-mailer', 'Entry Type Handle'), 'value' => 'entry.type.handle'],
+            ['label' => Craft::t('super-mailer', 'Author'), 'value' => 'entry.authorId'],
+        ];
+
+        return $options;
+    }
+
+    private function conditionSuggestions(): array
+    {
+        $sites = array_map(
+            static fn($site): array => [
+                'label' => $site->name . ' (' . $site->handle . ')',
+                'value' => (string)$site->id,
+            ],
+            Craft::$app->getSites()->getAllSites()
+        );
+
+        $entries = Craft::$app->getEntries();
+        $sections = [];
+        if (method_exists($entries, 'getAllSections')) {
+            $sections = array_map(
+                static fn($section): array => [
+                    'label' => $section->name,
+                    'value' => $section->handle,
+                ],
+                $entries->getAllSections()
+            );
+        }
+
+        $entryTypes = [];
+        if (method_exists($entries, 'getAllEntryTypes')) {
+            $entryTypes = array_map(
+                static fn($entryType): array => [
+                    'label' => $entryType->name,
+                    'value' => $entryType->handle,
+                ],
+                $entries->getAllEntryTypes()
+            );
+        }
+
+        return [
+            'element.siteId' => $sites,
+            'entry.section.handle' => $sections,
+            'entry.type.handle' => $entryTypes,
+        ];
     }
 }

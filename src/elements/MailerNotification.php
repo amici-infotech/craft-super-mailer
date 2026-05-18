@@ -28,6 +28,9 @@ class MailerNotification extends Element
     public ?string $emailSubject = null;
     public ?string $htmlTemplatePath = null;
     public ?string $plainTextTemplatePath = null;
+    public string $conditionMatchMode = 'all';
+    public array|string|null $conditionRules = [];
+    public ?string $phpCondition = null;
     public bool $enabledNotification = true;
 
     public static function displayName(): string
@@ -273,6 +276,9 @@ class MailerNotification extends Element
         $record->emailSubject = (string)$this->emailSubject;
         $record->htmlTemplatePath = $this->blankToNull($this->htmlTemplatePath);
         $record->plainTextTemplatePath = $this->blankToNull($this->plainTextTemplatePath);
+        $record->conditionMatchMode = in_array($this->conditionMatchMode, ['all', 'any'], true) ? $this->conditionMatchMode : 'all';
+        $record->conditionRules = json_encode($this->normalizedConditionRules());
+        $record->phpCondition = $this->blankToNull($this->phpCondition);
         $record->enabled = $this->enabledNotification;
         $record->save(false);
 
@@ -284,8 +290,10 @@ class MailerNotification extends Element
         $rules = parent::defineRules();
         $rules[] = [['title', 'handle', 'eventClass', 'eventConstant', 'eventName', 'toEmails', 'emailSubject'], 'required'];
         $rules[] = [['handle', 'eventClass', 'eventConstant', 'eventName', 'fromEmail', 'fromName', 'replyTo', 'emailSubject', 'htmlTemplatePath', 'plainTextTemplatePath'], 'string', 'max' => 255];
-        $rules[] = [['toEmails', 'ccEmails', 'bccEmails'], 'string'];
+        $rules[] = [['toEmails', 'ccEmails', 'bccEmails', 'phpCondition'], 'string'];
         $rules[] = [['enabledNotification'], 'boolean'];
+        $rules[] = [['conditionMatchMode'], 'in', 'range' => ['all', 'any']];
+        $rules[] = [['conditionRules'], 'safe'];
         $rules[] = [['replyTo'], 'email'];
         $rules[] = [['toEmails', 'ccEmails', 'bccEmails'], 'validateEmailList'];
         $rules[] = [['handle'], 'validateUniqueHandle'];
@@ -352,10 +360,57 @@ class MailerNotification extends Element
         $this->addError('plainTextTemplatePath', $message);
     }
 
+    public function afterFind(): void
+    {
+        parent::afterFind();
+        $this->conditionMatchMode = in_array($this->conditionMatchMode, ['all', 'any'], true) ? $this->conditionMatchMode : 'all';
+        $this->conditionRules = $this->normalizeConditionRules($this->conditionRules);
+    }
+
+    public function normalizedConditionRules(): array
+    {
+        return $this->normalizeConditionRules($this->conditionRules);
+    }
+
     private function blankToNull(?string $value): ?string
     {
         $value = trim((string)$value);
         return $value === '' ? null : $value;
+    }
+
+    private function normalizeConditionRules(array|string|null $rules): array
+    {
+        if (is_string($rules)) {
+            $decoded = json_decode($rules, true);
+            $rules = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($rules)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($rules as $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+
+            $field = trim((string)($rule['field'] ?? ''));
+            $operator = trim((string)($rule['operator'] ?? ''));
+            $value = trim((string)($rule['value'] ?? ''));
+
+            if ($field === '' && $operator === '' && $value === '') {
+                continue;
+            }
+
+            $normalized[] = [
+                'field' => $field,
+                'operator' => $operator,
+                'value' => $value,
+            ];
+        }
+
+        return $normalized;
     }
 
     private function generateHandle(string $title): string

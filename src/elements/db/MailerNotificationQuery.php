@@ -80,6 +80,9 @@ class MailerNotificationQuery extends ElementQuery
             'super_mailer_notifications.emailSubject',
             'super_mailer_notifications.htmlTemplatePath',
             'super_mailer_notifications.plainTextTemplatePath',
+            'super_mailer_notifications.conditionMatchMode',
+            'super_mailer_notifications.conditionRules',
+            'super_mailer_notifications.phpCondition',
             'super_mailer_notifications.enabled AS enabledNotification',
         ]);
 

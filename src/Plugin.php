@@ -37,7 +37,7 @@ class Plugin extends CraftPlugin
     public static ?Plugin $plugin = null;
     public static string $pluginHandle = 'super-mailer';
 
-    public string $schemaVersion = '5.0.0';
+    public string $schemaVersion = '5.0.3';
     public bool $hasCpSettings = true;
     public bool $hasCpSection = true;
 
