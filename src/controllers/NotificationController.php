@@ -157,9 +157,12 @@ class NotificationController extends Controller
             throw new NotFoundHttpException('Notification not found');
         }
 
+        $elementId = Craft::$app->getRequest()->getQueryParam('id');
+        $elementId = $elementId !== null && $elementId !== '' ? (int)$elementId : null;
+
         return $this->renderTemplate('super-mailer/notifications/preview', [
             'notification' => $notification,
-            'preview' => Plugin::getInstance()->getMailer()->preview($notification),
+            'preview' => Plugin::getInstance()->getMailer()->preview($notification, $elementId),
         ]);
     }
 

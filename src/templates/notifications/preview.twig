@@ -15,11 +15,23 @@
     {% if preview.html %}
         <h2>{{ "HTML Body"|t('super-mailer') }}</h2>
         <iframe title="{{ 'HTML preview'|t('super-mailer') }}" srcdoc="{{ preview.html|e('html_attr') }}" style="width:100%;min-height:420px;border:1px solid var(--hairline-color);border-radius:4px;background:#fff;"></iframe>
+    {% elseif preview.errors.html is defined %}
+        <h2>{{ "HTML Body"|t('super-mailer') }}</h2>
+        <div class="pane error">
+            <p><strong>{{ "HTML template failed to render:"|t('super-mailer') }}</strong></p>
+            <pre style="white-space:pre-wrap;">{{ preview.errors.html }}</pre>
+        </div>
     {% endif %}
 
     <h2>{{ "Plain Text Body"|t('super-mailer') }}</h2>
+    {% if preview.errors.text is defined %}
+        <div class="pane error">
+            <p><strong>{{ "Plain text template failed to render:"|t('super-mailer') }}</strong></p>
+            <pre style="white-space:pre-wrap;">{{ preview.errors.text }}</pre>
+        </div>
+    {% endif %}
     <pre style="white-space:pre-wrap;">{{ preview.text }}</pre>
 
-    <h2>{{ "Sample Event Context"|t('super-mailer') }}</h2>
+    <h2>{{ "Event Context"|t('super-mailer') }}</h2>
     <pre style="white-space:pre-wrap;">{{ preview.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
 {% endblock %}

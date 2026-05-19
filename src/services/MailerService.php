@@ -2,6 +2,7 @@
 namespace amici\SuperMailer\services;
 
 use amici\SuperMailer\elements\MailerNotification;
+use amici\SuperMailer\Plugin;
 use Craft;
 use craft\helpers\App;
 use Throwable;
@@ -53,16 +54,23 @@ class MailerService extends Component
         return $message->send();
     }
 
-    public function preview(MailerNotification $notification): array
+    public function preview(MailerNotification $notification, ?int $elementId = null): array
     {
-        $context = $this->sampleEventContext($notification);
+        $context = Plugin::getInstance()->getNotifications()->previewEventContext($notification, $elementId);
         $variables = $this->variables($notification, $context);
+        $htmlError = null;
+        $textError = null;
+        $html = $this->renderBody($notification->htmlTemplatePath, $variables, $htmlError);
+        $text = $this->renderBody($notification->plainTextTemplatePath, $variables, $textError);
 
         return [
             'subject' => $this->renderString((string)$notification->emailSubject, $variables),
-            'html' => $this->renderBody($notification->htmlTemplatePath, $variables),
-            'text' => $this->renderBody($notification->plainTextTemplatePath, $variables)
-                ?? $this->fallbackBody($notification, $context),
+            'html' => $html,
+            'text' => $text ?? $this->fallbackBody($notification, $context),
+            'errors' => array_filter([
+                'html' => $htmlError,
+                'text' => $textError,
+            ]),
             'context' => $context,
         ];
     }
@@ -87,8 +95,9 @@ class MailerService extends Component
         return $this->parseEmailList($this->renderString($value, $variables));
     }
 
-    public function renderBody(?string $templatePath, array $variables): ?string
+    public function renderBody(?string $templatePath, array $variables, ?string &$error = null): ?string
     {
+        $error = null;
         $templatePath = trim((string)$templatePath);
         if ($templatePath === '') {
             return null;
@@ -101,6 +110,7 @@ class MailerService extends Component
             $view->setTemplatesPath(Craft::$app->getPath()->getSiteTemplatesPath());
             return $view->renderTemplate($templatePath, $variables);
         } catch (Throwable $e) {
+            $error = $e->getMessage();
             Craft::warning('Super Mailer template render failed: ' . $e->getMessage(), __METHOD__);
             return null;
         } finally {
@@ -158,24 +168,4 @@ class MailerService extends Component
         return implode("\n", $lines);
     }
 
-    private function sampleEventContext(MailerNotification $notification): array
-    {
-        return [
-            'eventClass' => (string)$notification->eventClass,
-            'eventConstant' => (string)$notification->eventConstant,
-            'eventName' => (string)$notification->eventName,
-            'senderClass' => (string)$notification->eventClass,
-            'isNew' => true,
-            'element' => [
-                'id' => 123,
-                'type' => 'craft\\elements\\Entry',
-                'title' => 'Example Entry',
-                'siteId' => Craft::$app->getSites()->getCurrentSite()->id ?? null,
-                'status' => 'enabled',
-            ],
-            'data' => [
-                'sample' => true,
-            ],
-        ];
-    }
 }

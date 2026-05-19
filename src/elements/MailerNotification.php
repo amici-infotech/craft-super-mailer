@@ -7,7 +7,9 @@ use amici\SuperMailer\records\MailerNotificationRecord;
 use Craft;
 use craft\base\Element;
 use craft\elements\actions\Delete;
+use craft\elements\actions\Duplicate;
 use craft\elements\actions\Edit;
+use craft\elements\actions\SetStatus;
 use craft\elements\User;
 use craft\helpers\Html;
 use craft\helpers\UrlHelper;
@@ -110,16 +112,6 @@ class MailerNotification extends Element
                 'key' => '*',
                 'label' => Craft::t('super-mailer', 'All Notifications'),
             ],
-            [
-                'key' => 'enabled',
-                'label' => Craft::t('super-mailer', 'Enabled'),
-                'criteria' => ['enabledNotification' => true],
-            ],
-            [
-                'key' => 'disabled',
-                'label' => Craft::t('super-mailer', 'Disabled'),
-                'criteria' => ['enabledNotification' => false],
-            ],
         ];
     }
 
@@ -170,10 +162,12 @@ class MailerNotification extends Element
     protected static function defineActions(string $source = null): array
     {
         return [
+            SetStatus::class,
             [
                 'type' => Edit::class,
                 'label' => Craft::t('super-mailer', 'Edit notification'),
             ],
+            Duplicate::class,
             Delete::class,
         ];
     }
@@ -222,7 +216,12 @@ class MailerNotification extends Element
         return $user->can('super-mailer:manage-notifications');
     }
 
-    protected function tableAttributeHtml(string $attribute): string
+    public function canDuplicate(User $user): bool
+    {
+        return $user->can('super-mailer:manage-notifications');
+    }
+
+    protected function attributeHtml(string $attribute): string
     {
         return match ($attribute) {
             'eventLabel' => Html::tag('code', Html::encode($this->getEventLabel()), ['style' => 'font-size:11px;']),
@@ -231,12 +230,17 @@ class MailerNotification extends Element
                 : '',
             'toEmails' => Html::encode($this->shortenList((string)$this->toEmails)),
             'emailSubject' => Html::encode((string)$this->emailSubject),
-            default => parent::tableAttributeHtml($attribute),
+            default => parent::attributeHtml($attribute),
         };
     }
 
     public function beforeValidate(): bool
     {
+        if (!$this->id && $this->duplicateOf instanceof self) {
+            $this->title = $this->uniqueDuplicateTitle((string)$this->duplicateOf->title);
+            $this->handle = $this->uniqueDuplicateHandle((string)$this->duplicateOf->handle);
+        }
+
         $this->handle = trim((string)$this->handle);
         if ($this->handle === '' && $this->title) {
             $this->handle = $this->generateHandle((string)$this->title);
@@ -248,6 +252,22 @@ class MailerNotification extends Element
     public function beforeSave(bool $isNew): bool
     {
         $this->title = trim((string)$this->title);
+
+        if ($isNew) {
+            $this->enabled = $this->enabledNotification;
+        } else {
+            $record = MailerNotificationRecord::findOne($this->id);
+            if ($record) {
+                $oldEnabled = (bool)$record->enabled;
+
+                if ($this->enabledNotification !== $oldEnabled) {
+                    $this->enabled = $this->enabledNotification;
+                } elseif ((bool)$this->enabled !== $oldEnabled) {
+                    $this->enabledNotification = (bool)$this->enabled;
+                }
+            }
+        }
+
         return parent::beforeSave($isNew);
     }
 
@@ -417,6 +437,34 @@ class MailerNotification extends Element
     {
         $handle = lcfirst(str_replace(' ', '', ucwords(preg_replace('/[^a-zA-Z0-9]+/', ' ', $title))));
         return $handle !== '' ? $handle : 'notification';
+    }
+
+    private function uniqueDuplicateTitle(string $title): string
+    {
+        $baseTitle = trim($title) !== '' ? trim($title) . ' copy' : Craft::t('super-mailer', 'Notification copy');
+        $newTitle = $baseTitle;
+        $i = 2;
+
+        while (self::find()->title($newTitle)->status(null)->exists()) {
+            $newTitle = $baseTitle . ' ' . $i;
+            $i++;
+        }
+
+        return $newTitle;
+    }
+
+    private function uniqueDuplicateHandle(string $handle): string
+    {
+        $baseHandle = trim($handle) !== '' ? trim($handle) . 'Copy' : 'notificationCopy';
+        $newHandle = $baseHandle;
+        $i = 2;
+
+        while (self::find()->handle($newHandle)->status(null)->exists()) {
+            $newHandle = $baseHandle . $i;
+            $i++;
+        }
+
+        return $newHandle;
     }
 
     private function shortenList(string $value): string
