@@ -140,6 +140,7 @@ class NotificationService extends Component
 
     private function elementData(Element $element): array
     {
+        $fieldData = $this->fieldData($element);
         $data = [
             'id' => $element->id,
             'uid' => $element->uid,
@@ -153,8 +154,14 @@ class NotificationService extends Component
                 ? Craft::$app->getFormatter()->asDatetime($element->dateUpdated)
                 : null,
             'attributes' => $this->scalarArray($element->getAttributes()),
-            'fields' => $this->fieldData($element),
+            'fields' => $fieldData,
         ];
+
+        foreach ($fieldData as $handle => $value) {
+            if (!array_key_exists($handle, $data)) {
+                $data[$handle] = $value;
+            }
+        }
 
         if ($element instanceof Entry) {
             $author = $element->getAuthor();

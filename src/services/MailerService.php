@@ -1,9 +1,11 @@
 <?php
 namespace amici\SuperMailer\services;
 
+use amici\SuperMailer\behaviors\ElementContextBehavior;
 use amici\SuperMailer\elements\MailerNotification;
 use amici\SuperMailer\Plugin;
 use Craft;
+use craft\base\Element;
 use craft\helpers\App;
 use Throwable;
 use yii\base\Component;
@@ -133,12 +135,65 @@ class MailerService extends Component
 
     private function variables(MailerNotification $notification, array $eventContext): array
     {
+        $renderEvent = $this->renderEventContext($eventContext);
+
         return [
             'notification' => $notification,
-            'event' => $eventContext,
-            'eventContext' => $eventContext,
+            'event' => $renderEvent,
+            'eventContext' => $renderEvent,
+            'rawEventContext' => $eventContext,
             'craft' => Craft::$app->getView()->getTwig()->getGlobals()['craft'] ?? null,
         ];
+    }
+
+    private function renderEventContext(array $eventContext): array
+    {
+        $renderEvent = $eventContext;
+        $element = $this->contextElement($eventContext['element'] ?? null);
+
+        if ($element) {
+            $renderEvent['element'] = $element;
+            $renderEvent['sender'] = $element;
+        }
+
+        return $renderEvent;
+    }
+
+    private function contextElement(mixed $elementData): ?Element
+    {
+        if (!is_array($elementData)) {
+            return null;
+        }
+
+        $class = $elementData['type'] ?? null;
+        $id = $elementData['id'] ?? null;
+
+        if (!is_string($class) || !$id || !is_subclass_of($class, Element::class)) {
+            return null;
+        }
+
+        try {
+            $query = $class::find()
+                ->id((int)$id)
+                ->status(null);
+
+            if (!empty($elementData['siteId']) && method_exists($query, 'siteId')) {
+                $query->siteId((int)$elementData['siteId']);
+            }
+
+            $element = $query->one();
+            if (!$element instanceof Element) {
+                return null;
+            }
+
+            $element->attachBehavior('superMailerContext', new ElementContextBehavior([
+                'data' => $elementData,
+            ]));
+
+            return $element;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function fromAddress(MailerNotification $notification): string|array

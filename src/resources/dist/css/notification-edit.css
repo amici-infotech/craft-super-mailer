@@ -26,7 +26,8 @@
 }
 
 .super-mailer-event-option:hover,
-.super-mailer-event-option:focus {
+.super-mailer-event-option:focus,
+.super-mailer-event-option.is-active {
     background: var(--gray-050);
 }
 
@@ -45,9 +46,9 @@
     margin: 18px 0 24px;
     padding: 0;
     border: 1px solid var(--hairline-color);
-    border-radius: 10px;
+    border-radius: 0;
     background: var(--body-bg-color);
-    box-shadow: 0 12px 28px rgb(31 41 51 / 12%);
+    box-shadow: 0 10px 24px rgb(31 41 51 / 10%);
     overflow: hidden;
 }
 
@@ -58,7 +59,8 @@
     gap: 18px;
     padding: 18px 20px;
     border-bottom: 1px solid var(--hairline-color);
-    background: linear-gradient(135deg, rgb(9 89 133 / 10%), rgb(245 165 36 / 10%));
+    background: var(--gray-050);
+    box-shadow: inset 4px 0 0 #095985;
 }
 
 .super-mailer-generator-eyebrow {
@@ -82,7 +84,7 @@
     display: inline-block;
     margin-top: 5px;
     padding: 2px 7px;
-    border-radius: 999px;
+    border-radius: 3px;
     background: rgb(9 89 133 / 12%);
     color: #095985;
 }

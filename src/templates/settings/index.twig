@@ -5,6 +5,9 @@
 {% set fullPageForm = true %}
 {% set selectedNavItem = 'super-mailer' %}
 {% set selectedSubnavItem = 'settings' %}
+{% set crumbs = [
+    { label: "Super Mailer"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
+] %}
 
 {% block content %}
     {{ actionInput('super-mailer/settings/save') }}

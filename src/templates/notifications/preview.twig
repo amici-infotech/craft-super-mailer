@@ -4,6 +4,7 @@
 {% set selectedNavItem = 'super-mailer' %}
 {% set selectedSubnavItem = 'notifications' %}
 {% set crumbs = [
+    { label: "Super Mailer"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
     { label: "Notifications"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
     { label: notification.title, url: notification.cpEditUrl },
 ] %}

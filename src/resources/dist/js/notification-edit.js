@@ -38,6 +38,8 @@
     var phpCondition = document.getElementById('phpCondition');
     var baseCode = '';
     var currentCode = '';
+    var currentEventMatches = [];
+    var activeEventIndex = -1;
 
     function escapeHtml(value) {
         return String(value || '').replace(/[&<>"']/g, function(char) {
@@ -111,19 +113,47 @@
     }
 
     function renderResults(matches) {
+        currentEventMatches = matches.slice(0, 20);
+        activeEventIndex = currentEventMatches.length ? 0 : -1;
+
         if (!matches.length) {
             results.innerHTML = '<div class="zilch smalltext">' + escapeHtml(noMatchesLabel) + '</div>';
             results.classList.remove('hidden');
             return;
         }
 
-        results.innerHTML = matches.slice(0, 20).map(function(event) {
-            return '<button type="button" class="super-mailer-event-option" data-value="' + escapeHtml(event.value) + '">' +
+        results.innerHTML = currentEventMatches.map(function(event, index) {
+            return '<button type="button" class="super-mailer-event-option' + (index === activeEventIndex ? ' is-active' : '') + '" data-value="' + escapeHtml(event.value) + '" data-event-index="' + index + '">' +
                 '<strong>' + escapeHtml(event.class + '::' + event.constant) + '</strong>' +
                 '<code>' + escapeHtml(event.eventName + ' | ' + event.eventType) + '</code>' +
                 '</button>';
         }).join('');
         results.classList.remove('hidden');
+    }
+
+    function setActiveEventIndex(index) {
+        if (!currentEventMatches.length) {
+            activeEventIndex = -1;
+            return;
+        }
+
+        activeEventIndex = (index + currentEventMatches.length) % currentEventMatches.length;
+        Array.from(results.querySelectorAll('.super-mailer-event-option')).forEach(function(option, optionIndex) {
+            option.classList.toggle('is-active', optionIndex === activeEventIndex);
+            if (optionIndex === activeEventIndex) {
+                option.scrollIntoView({block: 'nearest'});
+            }
+        });
+    }
+
+    function selectActiveEvent() {
+        if (activeEventIndex < 0 || !currentEventMatches[activeEventIndex]) {
+            return false;
+        }
+
+        renderEvent(currentEventMatches[activeEventIndex]);
+        results.classList.add('hidden');
+        return true;
     }
 
     function renderEvent(event) {
@@ -500,7 +530,9 @@
     }
 
     if (conditionTable) {
-        conditionTable.querySelectorAll('[data-condition-row]').forEach(syncConditionRow);
+        conditionTable.querySelectorAll('[data-condition-row]').forEach(function(row) {
+            syncConditionRow(row, false);
+        });
         conditionTable.addEventListener('change', function(event) {
             var row = event.target.closest('[data-condition-row]');
             if (!row) {
@@ -560,7 +592,9 @@
             }
             event.target.closest('[data-condition-row]').remove();
             updateConditionIndexes();
-            conditionTable.querySelectorAll('[data-condition-row]').forEach(syncConditionRow);
+            conditionTable.querySelectorAll('[data-condition-row]').forEach(function(row) {
+                syncConditionRow(row, false);
+            });
             updateCodePreview();
         });
         conditionTable.addEventListener('keydown', function(event) {
@@ -590,6 +624,8 @@
         var query = search.value.trim().toLowerCase();
         if (query.length < 2) {
             results.classList.add('hidden');
+            currentEventMatches = [];
+            activeEventIndex = -1;
             return;
         }
 
@@ -604,13 +640,42 @@
         }
     });
 
+    search.addEventListener('keydown', function(event) {
+        if (results.classList.contains('hidden') || !currentEventMatches.length) {
+            return;
+        }
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setActiveEventIndex(activeEventIndex + 1);
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setActiveEventIndex(activeEventIndex - 1);
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            if (selectActiveEvent()) {
+                event.preventDefault();
+            }
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            results.classList.add('hidden');
+        }
+    });
+
     results.addEventListener('click', function(event) {
         var button = event.target.closest('.super-mailer-event-option');
         if (!button) {
             return;
         }
 
-        renderEvent(findByValue(button.dataset.value));
+        renderEvent(currentEventMatches[Number(button.dataset.eventIndex)] || findByValue(button.dataset.value));
         results.classList.add('hidden');
     });
 

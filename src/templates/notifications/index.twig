@@ -4,6 +4,9 @@
 {% set elementType = 'amici\\SuperMailer\\elements\\MailerNotification' %}
 {% set selectedNavItem = 'super-mailer' %}
 {% set selectedSubnavItem = 'notifications' %}
+{% set crumbs = [
+    { label: "Super Mailer"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
+] %}
 
 {% block actionButton %}
     <a href="{{ cpUrl('super-mailer/notifications/new') }}" class="btn submit add icon">{{ "New notification"|t('super-mailer') }}</a>

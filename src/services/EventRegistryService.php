@@ -172,94 +172,36 @@ class EventRegistryService extends Component
 
     private function isContentManagementEvent(string $class, string $constant, string $eventName): bool
     {
-        if (str_starts_with($constant, 'EVENT_BEFORE_')) {
-            return false;
-        }
-
-        if (preg_match('/EVENT_(REGISTER|DEFINE|MODIFY|RENDER|VALIDATE|AUTHORIZE|SET_|PREP_|CONFIGURE|COMPILE|TRANSFORM|DEFAULT)_/', $constant)) {
+        if (!str_starts_with($constant, 'EVENT_AFTER_')) {
             return false;
         }
 
         if ($class === Elements::class) {
-            return in_array($constant, [
-                'EVENT_AFTER_SAVE_ELEMENT',
-                'EVENT_AFTER_DELETE_ELEMENT',
-                'EVENT_AFTER_RESTORE_ELEMENT',
-                'EVENT_AFTER_PROPAGATE_ELEMENT',
-                'EVENT_AFTER_DELETE_FOR_SITE',
-            ], true);
+            return $this->isElementLifecycleConstant($constant, $eventName);
         }
 
         if (in_array($class, $this->registeredContentEventClasses(), true)) {
-            return $this->isContentLifecycleConstant($constant, $eventName);
+            return $this->isElementLifecycleConstant($constant, $eventName);
         }
 
-        if (str_starts_with($class, 'yii\\')) {
-            return false;
-        }
-
-        if (str_starts_with($class, 'craft\\') && !str_starts_with($class, 'craft\\commerce\\')) {
-            return false;
-        }
-
-        return $this->isPluginContentEvent($constant, $eventName);
+        return false;
     }
 
-    private function isContentLifecycleConstant(string $constant, string $eventName): bool
+    private function isElementLifecycleConstant(string $constant, string $eventName): bool
     {
         if (in_array($constant, [
             'EVENT_AFTER_SAVE',
+            'EVENT_AFTER_SAVE_ELEMENT',
             'EVENT_AFTER_DELETE',
+            'EVENT_AFTER_DELETE_ELEMENT',
             'EVENT_AFTER_RESTORE',
+            'EVENT_AFTER_RESTORE_ELEMENT',
             'EVENT_AFTER_PROPAGATE',
+            'EVENT_AFTER_PROPAGATE_ELEMENT',
             'EVENT_AFTER_MOVE_IN_STRUCTURE',
             'EVENT_AFTER_DELETE_FOR_SITE',
-            'EVENT_AFTER_SUBMIT',
-            'EVENT_AFTER_SUBMISSION',
-            'EVENT_PROCESS_SUBMISSION',
-            'EVENT_AFTER_ORDER_PAID',
-            'EVENT_AFTER_ORDER_AUTHORIZED',
-            'EVENT_AFTER_ADD_LINE_ITEM',
-            'EVENT_AFTER_REMOVE_LINE_ITEM',
         ], true)) {
             return true;
-        }
-
-        return str_starts_with($constant, 'EVENT_AFTER_')
-            && !preg_match('/(VALIDATE|RENDER|HTML|TABLE|FIELD|LABEL|INPUT|INSTRUCTION|CACHE|SEARCH|INDEX|QUERY|EXPORT|EMAIL|MAIL|LAYOUT)$/', $constant)
-            && !preg_match('/(validate|render|html|table|field|label|input|instruction|cache|search|index|query|export|email|mail|layout)/', $eventName);
-    }
-
-    private function isPluginContentEvent(string $constant, string $eventName): bool
-    {
-        if (preg_match('/(VALIDATE|RENDER|HTML|TABLE|FIELD|LABEL|INPUT|INSTRUCTION|CACHE|SEARCH|INDEX|QUERY|EXPORT|LAYOUT)/', $constant)
-            || preg_match('/(validate|render|html|table|field|label|input|instruction|cache|search|index|query|export|layout)/', $eventName)) {
-            return false;
-        }
-
-        $contentKeywords = [
-            'SAVE',
-            'DELETE',
-            'SUBMIT',
-            'SUBMISSION',
-            'UPLOAD',
-            'PAYMENT',
-            'ORDER',
-            'TRANSACTION',
-            'STATUS_CHANGE',
-            'CREATE',
-            'COMPLETE',
-            'PROCESS',
-        ];
-
-        $eventText = strtoupper($constant . ' ' . $eventName);
-        foreach ($contentKeywords as $keyword) {
-            if (str_contains($eventText, $keyword)) {
-                return str_starts_with($constant, 'EVENT_AFTER_')
-                    || str_contains($constant, 'STATUS_CHANGE')
-                    || str_contains($constant, 'SUBMIT')
-                    || str_contains($constant, 'SUBMISSION');
-            }
         }
 
         return false;
