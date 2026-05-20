@@ -26,6 +26,7 @@ class SettingsController extends Controller
 
         $settings = Plugin::getInstance()->getSettings();
         $settings->pluginName = Craft::$app->getRequest()->getBodyParam('pluginName', $settings->pluginName);
+        $settings->emailLogRetentionDays = (int)Craft::$app->getRequest()->getBodyParam('emailLogRetentionDays', $settings->emailLogRetentionDays);
 
         if (!$settings->validate() || !Craft::$app->getPlugins()->savePluginSettings(Plugin::getInstance(), $settings->toArray())) {
             Craft::$app->getUrlManager()->setRouteParams([

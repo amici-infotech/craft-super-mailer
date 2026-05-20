@@ -37,7 +37,7 @@ class Plugin extends CraftPlugin
     public static ?Plugin $plugin = null;
     public static string $pluginHandle = 'super-mailer';
 
-    public string $schemaVersion = '5.0.3';
+    public string $schemaVersion = '5.0.4';
     public bool $hasCpSettings = true;
     public bool $hasCpSection = true;
 
@@ -76,11 +76,16 @@ class Plugin extends CraftPlugin
     {
         $item = parent::getCpNavItem();
         $item['label'] = $this->getSettings()->pluginName;
-        $item['url'] = 'super-mailer/notifications';
+        $item['url'] = 'super-mailer';
 
         $item['subnav']['notifications'] = [
             'label' => Craft::t('super-mailer', 'Notifications'),
             'url' => 'super-mailer/notifications',
+        ];
+
+        $item['subnav']['logs'] = [
+            'label' => Craft::t('super-mailer', 'Logs'),
+            'url' => 'super-mailer/logs',
         ];
 
         $item['subnav']['settings'] = [
@@ -108,6 +113,7 @@ class Plugin extends CraftPlugin
                     'super-mailer/notifications/new' => 'super-mailer/notification/edit',
                     'super-mailer/notifications/<notificationId:\d+>' => 'super-mailer/notification/edit',
                     'super-mailer/notifications/<notificationId:\d+>/preview' => 'super-mailer/notification/preview',
+                    'super-mailer/logs' => 'super-mailer/logs/index',
                     'super-mailer/settings' => 'super-mailer/settings/index',
                 ]);
             }

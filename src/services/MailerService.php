@@ -4,6 +4,7 @@ namespace amici\SuperMailer\services;
 use amici\SuperMailer\behaviors\ElementContextBehavior;
 use amici\SuperMailer\elements\MailerNotification;
 use amici\SuperMailer\Plugin;
+use amici\SuperMailer\records\EmailLogRecord;
 use Craft;
 use craft\base\Element;
 use craft\helpers\App;
@@ -14,46 +15,72 @@ class MailerService extends Component
 {
     public function sendNotification(MailerNotification $notification, array $eventContext): bool
     {
-        $variables = $this->variables($notification, $eventContext);
-        $subject = $this->renderString((string)$notification->emailSubject, $variables);
-        $html = $this->renderBody($notification->htmlTemplatePath, $variables);
-        $text = $this->renderBody($notification->plainTextTemplatePath, $variables);
+        $messageData = [];
 
-        if ($html === null && $text === null) {
-            $text = $this->fallbackBody($notification, $eventContext);
+        try {
+            $variables = $this->variables($notification, $eventContext);
+            $subject = $this->renderString((string)$notification->emailSubject, $variables);
+            $html = $this->renderBody($notification->htmlTemplatePath, $variables);
+            $text = $this->renderBody($notification->plainTextTemplatePath, $variables);
+
+            if ($html === null && $text === null) {
+                $text = $this->fallbackBody($notification, $eventContext);
+            }
+
+            $message = Craft::$app->getMailer()->compose();
+            $to = $this->renderEmailList((string)$notification->toEmails, $variables);
+            $cc = $this->renderEmailList((string)$notification->ccEmails, $variables);
+            $bcc = $this->renderEmailList((string)$notification->bccEmails, $variables);
+            $from = $this->fromAddress($notification);
+            $replyTo = trim((string)$notification->replyTo);
+            $messageData = [
+                'subject' => $subject,
+                'to' => $to,
+                'cc' => $cc,
+                'bcc' => $bcc,
+                'from' => $from,
+                'replyTo' => $replyTo,
+            ];
+
+            $message->setTo($to);
+
+            if (!empty($cc)) {
+                $message->setCc($cc);
+            }
+
+            if (!empty($bcc)) {
+                $message->setBcc($bcc);
+            }
+
+            $message->setFrom($from);
+
+            if ($replyTo !== '') {
+                $message->setReplyTo($replyTo);
+            }
+
+            $message->setSubject($subject);
+
+            if ($html !== null) {
+                $message->setHtmlBody($html);
+            }
+
+            if ($text !== null) {
+                $message->setTextBody($text);
+            }
+
+            $sent = $message->send();
+            if (!$sent) {
+                $error = $this->messageError($message) ?: Craft::t('super-mailer', 'Mailer returned false.');
+                $this->recordEmailLog($notification, $eventContext, EmailLogRecord::STATUS_FAILED, $error, $messageData);
+                return false;
+            }
+
+            $this->recordEmailLog($notification, $eventContext, EmailLogRecord::STATUS_SUCCESS, null, $messageData);
+            return true;
+        } catch (Throwable $e) {
+            $this->recordEmailLog($notification, $eventContext, EmailLogRecord::STATUS_FAILED, $this->exceptionLog($e), $messageData);
+            return false;
         }
-
-        $message = Craft::$app->getMailer()->compose();
-        $message->setTo($this->renderEmailList((string)$notification->toEmails, $variables));
-
-        $cc = $this->renderEmailList((string)$notification->ccEmails, $variables);
-        if (!empty($cc)) {
-            $message->setCc($cc);
-        }
-
-        $bcc = $this->renderEmailList((string)$notification->bccEmails, $variables);
-        if (!empty($bcc)) {
-            $message->setBcc($bcc);
-        }
-
-        $message->setFrom($this->fromAddress($notification));
-
-        $replyTo = trim((string)$notification->replyTo);
-        if ($replyTo !== '') {
-            $message->setReplyTo($replyTo);
-        }
-
-        $message->setSubject($subject);
-
-        if ($html !== null) {
-            $message->setHtmlBody($html);
-        }
-
-        if ($text !== null) {
-            $message->setTextBody($text);
-        }
-
-        return $message->send();
     }
 
     public function preview(MailerNotification $notification, ?int $elementId = null): array
@@ -206,6 +233,54 @@ class MailerService extends Component
         $name = trim((string)$notification->fromName) ?: $defaultName;
 
         return $name !== '' ? [$email => $name] : $email;
+    }
+
+    private function messageError(mixed $message): ?string
+    {
+        try {
+            $error = $message->error ?? null;
+            if ($error instanceof Throwable) {
+                return $this->exceptionLog($error);
+            }
+        } catch (Throwable) {
+        }
+
+        $recentMailerError = $this->recentMailerError();
+        return $recentMailerError ?: null;
+    }
+
+    private function exceptionLog(Throwable $e): string
+    {
+        return $e->getMessage() . "\n\n" . $e::class . "\n" . $e->getTraceAsString();
+    }
+
+    private function recentMailerError(): ?string
+    {
+        $messages = Craft::getLogger()->messages;
+        for ($i = count($messages) - 1; $i >= 0; $i--) {
+            $message = $messages[$i] ?? null;
+            if (!is_array($message) || ($message[2] ?? null) !== 'craft\mail\Mailer::send') {
+                continue;
+            }
+
+            $text = (string)($message[0] ?? '');
+            if (str_contains($text, 'Error sending email:')) {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
+    private function recordEmailLog(
+        MailerNotification $notification,
+        array $eventContext,
+        string $status,
+        ?string $error,
+        array $messageData
+    ): void {
+        Plugin::getInstance()->getLogs()->record($notification, $eventContext, $status, $error, $messageData);
+        Plugin::getInstance()->getLogs()->purgeByRetention();
     }
 
     private function fallbackBody(MailerNotification $notification, array $eventContext): string

@@ -7,6 +7,7 @@ use amici\SuperMailer\Plugin;
 use Craft;
 use craft\base\Element;
 use craft\elements\Entry;
+use craft\helpers\ElementHelper;
 use Throwable;
 use yii\base\Component;
 use yii\base\Event;
@@ -47,8 +48,21 @@ class NotificationService extends Component
         foreach ($groups as $key => $notificationIds) {
             [$class, $eventName] = explode('::', $key, 2);
             Event::on($class, $eventName, function(Event $event) use ($class, $eventName, $notificationIds): void {
+                if ($this->shouldIgnoreEvent($event)) {
+                    return;
+                }
+
                 $context = $this->normalizeEvent($class, $eventName, $event);
                 foreach ($notificationIds as $notificationId) {
+                    $notification = MailerNotification::find()
+                        ->id($notificationId)
+                        ->status(null)
+                        ->one();
+
+                    if (!$notification instanceof MailerNotification || !$this->conditionsPass($notification, $event, $context)) {
+                        continue;
+                    }
+
                     Craft::$app->getQueue()->push(new SendNotificationEmailJob([
                         'notificationId' => $notificationId,
                         'eventContext' => $context,
@@ -78,7 +92,7 @@ class NotificationService extends Component
             'eventClass' => $class,
             'eventName' => $eventName,
             'senderClass' => is_object($event->sender) ? $event->sender::class : (string)$event->sender,
-            'isNew' => (bool)($data['isNew'] ?? false),
+            'isNew' => $this->isNewEvent($event, $element, $data),
             'element' => $element ? $this->elementData($element) : null,
             'data' => $data,
             'time' => gmdate('c'),
@@ -106,6 +120,105 @@ class NotificationService extends Component
         }
 
         return $context;
+    }
+
+    private function shouldIgnoreEvent(Event $event): bool
+    {
+        $element = $this->eventElement($event);
+
+        return $element instanceof Element && $this->isNonCanonicalElement($element);
+    }
+
+    private function conditionsPass(MailerNotification $notification, Event $event, array $context): bool
+    {
+        $rules = $notification->normalizedConditionRules();
+        $phpCondition = trim((string)$notification->phpCondition);
+        $results = [];
+
+        foreach ($rules as $rule) {
+            $results[] = $this->conditionRulePasses($rule, $context);
+        }
+
+        if ($phpCondition !== '') {
+            $results[] = $this->phpConditionPasses($phpCondition, $event);
+        }
+
+        if (!$results) {
+            return true;
+        }
+
+        return $notification->conditionMatchMode === 'any'
+            ? in_array(true, $results, true)
+            : !in_array(false, $results, true);
+    }
+
+    private function conditionRulePasses(array $rule, array $context): bool
+    {
+        $actual = $this->conditionValue((string)($rule['field'] ?? ''), $context);
+        $expectedValues = $this->conditionExpectedValues((string)($rule['value'] ?? ''));
+
+        if (($rule['operator'] ?? 'equals') === 'contains') {
+            return in_array((string)$actual, $expectedValues, true);
+        }
+
+        return (string)$actual === (string)($expectedValues[0] ?? '');
+    }
+
+    private function conditionValue(string $field, array $context): mixed
+    {
+        $element = is_array($context['element'] ?? null) ? $context['element'] : [];
+        $elementObject = $this->contextElement($context);
+
+        return match ($field) {
+            'element.status' => ($element['enabled'] ?? false) ? 'enabled' : 'disabled',
+            'event.isNew' => !empty($context['isNew']) ? 'true' : 'false',
+            'element.siteId' => isset($element['siteId']) ? (string)$element['siteId'] : null,
+            'entry.authorId' => $elementObject instanceof Entry ? (string)$elementObject->authorId : ($element['authorId'] ?? null),
+            'entry.type.handle' => $elementObject instanceof Entry ? ($elementObject->type->handle ?? null) : null,
+            'entry.section.handle' => $elementObject instanceof Entry ? ($elementObject->section->handle ?? null) : null,
+            default => null,
+        };
+    }
+
+    private function conditionExpectedValues(string $value): array
+    {
+        return array_values(array_filter(array_map('trim', explode(',', $value)), static fn(string $item): bool => $item !== ''));
+    }
+
+    private function phpConditionPasses(string $expression, Event $event): bool
+    {
+        try {
+            return (bool)eval('return (bool)(' . $expression . ');');
+        } catch (Throwable $e) {
+            Craft::warning('Super Mailer PHP condition failed: ' . $e->getMessage(), __METHOD__);
+            return false;
+        }
+    }
+
+    private function contextElement(array $context): ?Element
+    {
+        $elementData = is_array($context['element'] ?? null) ? $context['element'] : null;
+        if (!$elementData) {
+            return null;
+        }
+
+        $class = $elementData['type'] ?? null;
+        $id = $elementData['id'] ?? null;
+        if (!is_string($class) || !$id || !is_subclass_of($class, Element::class)) {
+            return null;
+        }
+
+        try {
+            $query = $class::find()->id((int)$id)->status(null);
+            if (!empty($elementData['siteId']) && method_exists($query, 'siteId')) {
+                $query->siteId((int)$elementData['siteId']);
+            }
+
+            $element = $query->one();
+            return $element instanceof Element ? $element : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function notificationTableExists(): bool
@@ -148,6 +261,12 @@ class NotificationService extends Component
             'title' => (string)$element,
             'siteId' => $element->siteId,
             'status' => $element->getStatus(),
+            'enabled' => (bool)$element->enabled && (bool)$element->getEnabledForSite(),
+            'isDraft' => $element->getIsDraft(),
+            'isRevision' => $element->getIsRevision(),
+            'isDerivative' => $element->getIsDerivative(),
+            'isProvisionalDraft' => $element->isProvisionalDraft,
+            'firstSave' => (bool)$element->firstSave,
             'cpEditUrl' => $element->getCpEditUrl(),
             'dateUpdated' => $element->dateUpdated?->format('c'),
             'dateUpdatedFormatted' => $element->dateUpdated
@@ -173,6 +292,46 @@ class NotificationService extends Component
         }
 
         return $data;
+    }
+
+    private function isNonCanonicalElement(Element $element): bool
+    {
+        return ElementHelper::isDraftOrRevision($element)
+            || $element->getIsDerivative()
+            || $element->isProvisionalDraft;
+    }
+
+    private function isNewEvent(Event $event, ?Element $element, array $data): bool
+    {
+        if (!empty($data['isNew'])) {
+            return true;
+        }
+
+        if ($element && $element->firstSave) {
+            return true;
+        }
+
+        return $element instanceof Element && $this->requestIsFreshDraftApply($element);
+    }
+
+    private function requestIsFreshDraftApply(Element $element): bool
+    {
+        try {
+            $request = Craft::$app->getRequest();
+            if ($request->getIsConsoleRequest()) {
+                return false;
+            }
+
+            $action = (string)$request->getBodyParam('action');
+            $fresh = $request->getBodyParam('fresh') ?? $request->getBodyParam('isFresh');
+            $elementId = (int)$request->getBodyParam('elementId');
+
+            return $action === 'elements/apply-draft'
+                && (bool)$fresh
+                && $elementId === (int)$element->id;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function previewEvent(MailerNotification $notification, string $eventType, ?Element $previewElement = null, ?int $elementId = null): Event

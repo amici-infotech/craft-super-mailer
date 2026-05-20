@@ -5,7 +5,6 @@ use amici\SuperMailer\elements\MailerNotification;
 use amici\SuperMailer\Plugin;
 use Craft;
 use craft\queue\BaseJob;
-use Throwable;
 
 class SendNotificationEmailJob extends BaseJob
 {
@@ -23,18 +22,7 @@ class SendNotificationEmailJob extends BaseJob
             return;
         }
 
-        try {
-            Plugin::getInstance()->getMailer()->sendNotification($notification, $this->eventContext);
-        } catch (Throwable $e) {
-            Craft::error(
-                Craft::t('super-mailer', 'Super Mailer failed to send notification {id}: {message}', [
-                    'id' => $this->notificationId,
-                    'message' => $e->getMessage(),
-                ]),
-                __METHOD__
-            );
-            throw $e;
-        }
+        Plugin::getInstance()->getMailer()->sendNotification($notification, $this->eventContext);
     }
 
     protected function defaultDescription(): ?string

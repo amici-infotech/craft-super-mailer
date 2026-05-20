@@ -1,0 +1,67 @@
+{% extends "_layouts/cp" %}
+
+{% set title = "Email Logs"|t('super-mailer') %}
+{% set selectedNavItem = 'super-mailer' %}
+{% set selectedSubnavItem = 'logs' %}
+{% set crumbs = [
+    { label: "Super Mailer"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
+] %}
+
+{% block content %}
+    {% if logs %}
+        <table class="data fullwidth">
+            <thead>
+                <tr>
+                    <th>{{ "Status"|t('super-mailer') }}</th>
+                    <th>{{ "Subject"|t('super-mailer') }}</th>
+                    <th>{{ "To"|t('super-mailer') }}</th>
+                    <th>{{ "Event"|t('super-mailer') }}</th>
+                    <th>{{ "Element"|t('super-mailer') }}</th>
+                    <th>{{ "Date"|t('app') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                    <tr>
+                        <td>
+                            {% if log.status == 'success' %}
+                                <span class="status enabled"></span>{{ "Success"|t('super-mailer') }}
+                            {% else %}
+                                <span class="status disabled"></span>{{ "Failed"|t('super-mailer') }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ log.subject ?: "No subject"|t('super-mailer') }}</strong>
+                            {% if log.status == 'failed' and log.error %}
+                                <pre class="error smalltext" style="margin-top:4px;white-space:pre-wrap;">{{ log.error }}</pre>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.toEmailsList %}
+                                {{ log.toEmailsList|join(', ') }}
+                            {% else %}
+                                <span class="light">{{ "None"|t('super-mailer') }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <code>{{ log.eventClass }}::{{ log.eventName }}</code>
+                        </td>
+                        <td>
+                            {% if log.elementType and log.elementId %}
+                                <code>{{ log.elementType }}</code>
+                                <div class="light">#{{ log.elementId }}</div>
+                            {% else %}
+                                <span class="light">{{ "None"|t('super-mailer') }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.dateCreated|datetime('short') }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="zilch">
+            {{ "No email logs yet."|t('super-mailer') }}
+        </div>
+    {% endif %}
+{% endblock %}

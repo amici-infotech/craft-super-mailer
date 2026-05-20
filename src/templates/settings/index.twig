@@ -23,4 +23,16 @@
         errors: settings.getErrors('pluginName'),
         required: true
     }) }}
+
+    {{ forms.textField({
+        label: "Email Log Retention"|t('super-mailer'),
+        instructions: "Automatically purge email logs older than this many days after each send. Set to 0 to disable automatic purging."|t('super-mailer'),
+        id: 'emailLogRetentionDays',
+        name: 'emailLogRetentionDays',
+        type: 'number',
+        min: 0,
+        value: settings.emailLogRetentionDays,
+        errors: settings.getErrors('emailLogRetentionDays'),
+        unit: "days"|t('super-mailer')
+    }) }}
 {% endblock %}

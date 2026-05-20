@@ -271,15 +271,20 @@
     function conditionExpression(rule) {
         var value = escapePhpSingleQuotedString(rule.value || '');
         var fieldExpression = {
-            'element.status': '($event->sender->status ?? null)',
+            'element.status': '(($event->sender->enabled ?? false) ? \'enabled\' : \'disabled\')',
             'entry.type.handle': '($event->sender->type->handle ?? null)',
             'entry.section.handle': '($event->sender->section->handle ?? null)',
             'element.siteId': '((string)($event->sender->siteId ?? \'\'))',
-            'entry.authorId': '((string)($event->sender->authorId ?? \'\'))'
+            'entry.authorId': '((string)($event->sender->authorId ?? \'\'))',
+            'event.isNew': '(bool)($event->isNew ?? false)'
         }[rule.field] || 'null';
 
         if (rule.field === 'element.status') {
             return fieldExpression + " == '" + (value || 'enabled') + "'";
+        }
+
+        if (rule.field === 'event.isNew') {
+            return fieldExpression + ' === ' + (value === 'true' || value === '1' ? 'true' : 'false');
         }
 
         if (rule.operator === 'contains') {
@@ -316,6 +321,10 @@
     function conditionValueType(field) {
         if (field === 'element.status') {
             return 'toggle';
+        }
+
+        if (field === 'event.isNew') {
+            return 'booleanToggle';
         }
 
         if (field === 'entry.authorId') {
@@ -401,6 +410,15 @@
             '</button>';
     }
 
+    function renderBooleanToggle(name, value) {
+        var enabled = value === true || value === 'true' || value === '1' || value === 'enabled';
+
+        return '<button type="button" class="lightswitch' + (enabled ? ' on' : '') + '" data-boolean-toggle role="switch" aria-checked="' + (enabled ? 'true' : 'false') + '">' +
+            '<div class="lightswitch-container"><div class="handle"></div></div>' +
+            '<input type="hidden" name="' + escapeHtml(name) + '" value="' + (enabled ? 'true' : 'false') + '">' +
+            '</button>';
+    }
+
     function renderAuthorPicker(name, value) {
         var values = parseTokenValues(value);
 
@@ -425,6 +443,17 @@
 
     function toggleStatusValue(toggle) {
         setStatusToggle(toggle, toggle.getAttribute('aria-checked') !== 'true');
+        updateCodePreview();
+    }
+
+    function toggleBooleanValue(toggle) {
+        var enabled = toggle.getAttribute('aria-checked') !== 'true';
+        var hiddenValue = toggle.querySelector('[name$="[value]"]');
+        toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
+        toggle.classList.toggle('on', enabled);
+        if (hiddenValue) {
+            hiddenValue.value = enabled ? 'true' : 'false';
+        }
         updateCodePreview();
     }
 
@@ -490,6 +519,12 @@
             operatorCell.innerHTML = '<input type="hidden" name="conditionRules[' + index + '][operator]" value="equals">';
             valueCell.innerHTML = renderStatusToggle(valueName, currentValue);
             setStatusToggle(valueCell.querySelector('[data-status-toggle]'), currentValue !== 'disabled');
+            return;
+        }
+
+        if (valueType === 'booleanToggle') {
+            operatorCell.innerHTML = '<input type="hidden" name="conditionRules[' + index + '][operator]" value="equals">';
+            valueCell.innerHTML = renderBooleanToggle(valueName, currentValue);
             return;
         }
 
@@ -572,6 +607,10 @@
                 toggleStatusValue(event.target.closest('[data-status-toggle]'));
                 return;
             }
+            if (event.target.closest('[data-boolean-toggle]')) {
+                toggleBooleanValue(event.target.closest('[data-boolean-toggle]'));
+                return;
+            }
             if (event.target.closest('[data-select-author]') && row) {
                 selectAuthor(row);
                 return;
@@ -602,6 +641,10 @@
                 event.preventDefault();
                 toggleStatusValue(event.target.closest('[data-status-toggle]'));
                 return;
+            }
+            if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[data-boolean-toggle]')) {
+                event.preventDefault();
+                toggleBooleanValue(event.target.closest('[data-boolean-toggle]'));
             }
         });
     }

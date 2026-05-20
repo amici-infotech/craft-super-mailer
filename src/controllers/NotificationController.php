@@ -170,6 +170,7 @@ class NotificationController extends Controller
     {
         $options = [
             ['label' => Craft::t('super-mailer', 'Status'), 'value' => 'element.status'],
+            ['label' => Craft::t('super-mailer', 'Is New'), 'value' => 'event.isNew'],
             ['label' => Craft::t('super-mailer', 'Site ID'), 'value' => 'element.siteId'],
             ['label' => Craft::t('super-mailer', 'Section Handle'), 'value' => 'entry.section.handle'],
             ['label' => Craft::t('super-mailer', 'Entry Type Handle'), 'value' => 'entry.type.handle'],
