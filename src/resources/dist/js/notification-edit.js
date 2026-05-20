@@ -418,19 +418,23 @@
     function renderStatusToggle(name, value) {
         var enabled = value !== 'disabled';
 
-        return '<button type="button" class="lightswitch' + (enabled ? ' on' : '') + '" data-status-toggle role="switch" aria-checked="' + (enabled ? 'true' : 'false') + '">' +
-            '<div class="lightswitch-container"><div class="handle"></div></div>' +
+        return '<div class="super-mailer-condition-toggle-wrap" data-condition-toggle-wrap>' +
+            '<button type="button" class="super-mailer-condition-toggle' + (enabled ? ' on' : '') + '" data-status-toggle role="switch" aria-checked="' + (enabled ? 'true' : 'false') + '">' +
+            '<span class="super-mailer-condition-toggle-track"><span class="super-mailer-condition-toggle-handle"></span></span>' +
+            '</button>' +
             '<input type="hidden" name="' + escapeHtml(name) + '" value="' + (enabled ? 'enabled' : 'disabled') + '">' +
-            '</button>';
+            '</div>';
     }
 
     function renderBooleanToggle(name, value) {
         var enabled = value === true || value === 'true' || value === '1' || value === 'enabled';
 
-        return '<button type="button" class="lightswitch' + (enabled ? ' on' : '') + '" data-boolean-toggle role="switch" aria-checked="' + (enabled ? 'true' : 'false') + '">' +
-            '<div class="lightswitch-container"><div class="handle"></div></div>' +
+        return '<div class="super-mailer-condition-toggle-wrap" data-condition-toggle-wrap>' +
+            '<button type="button" class="super-mailer-condition-toggle' + (enabled ? ' on' : '') + '" data-boolean-toggle role="switch" aria-checked="' + (enabled ? 'true' : 'false') + '">' +
+            '<span class="super-mailer-condition-toggle-track"><span class="super-mailer-condition-toggle-handle"></span></span>' +
+            '</button>' +
             '<input type="hidden" name="' + escapeHtml(name) + '" value="' + (enabled ? 'true' : 'false') + '">' +
-            '</button>';
+            '</div>';
     }
 
     function renderAuthorPicker(name, value) {
@@ -447,7 +451,8 @@
     }
 
     function setStatusToggle(toggle, enabled) {
-        var hiddenValue = toggle.querySelector('[name$="[value]"]');
+        var wrap = toggle.closest('[data-condition-toggle-wrap]');
+        var hiddenValue = wrap ? wrap.querySelector('[name$="[value]"]') : null;
         toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
         toggle.classList.toggle('on', enabled);
         if (hiddenValue) {
@@ -462,7 +467,8 @@
 
     function toggleBooleanValue(toggle) {
         var enabled = toggle.getAttribute('aria-checked') !== 'true';
-        var hiddenValue = toggle.querySelector('[name$="[value]"]');
+        var wrap = toggle.closest('[data-condition-toggle-wrap]');
+        var hiddenValue = wrap ? wrap.querySelector('[name$="[value]"]') : null;
         toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
         toggle.classList.toggle('on', enabled);
         if (hiddenValue) {
@@ -649,17 +655,6 @@
                 syncConditionRow(row, false);
             });
             updateCodePreview();
-        });
-        conditionTable.addEventListener('keydown', function(event) {
-            if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[data-status-toggle]')) {
-                event.preventDefault();
-                toggleStatusValue(event.target.closest('[data-status-toggle]'));
-                return;
-            }
-            if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[data-boolean-toggle]')) {
-                event.preventDefault();
-                toggleBooleanValue(event.target.closest('[data-boolean-toggle]'));
-            }
         });
     }
 
