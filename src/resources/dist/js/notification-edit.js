@@ -280,7 +280,7 @@
         }[rule.field] || 'null';
 
         if (rule.field === 'element.status') {
-            return fieldExpression + " == '" + (value || 'enabled') + "'";
+            return fieldExpression + " == '" + normalizeStatusValue(value || 'enabled') + "'";
         }
 
         if (rule.field === 'event.isNew') {
@@ -292,6 +292,20 @@
         }
 
         return fieldExpression + " == '" + value + "'";
+    }
+
+    function normalizeStatusValue(value) {
+        value = String(value || '').trim().toLowerCase();
+
+        if (['1', 'true', 'yes', 'on', 'enabled', 'live'].indexOf(value) !== -1) {
+            return 'enabled';
+        }
+
+        if (['0', 'false', 'no', 'off', 'disabled'].indexOf(value) !== -1) {
+            return 'disabled';
+        }
+
+        return value || 'enabled';
     }
 
     function phpArray(values) {

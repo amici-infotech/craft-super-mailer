@@ -114,6 +114,9 @@ class Plugin extends CraftPlugin
                     'super-mailer/notifications/<notificationId:\d+>' => 'super-mailer/notification/edit',
                     'super-mailer/notifications/<notificationId:\d+>/preview' => 'super-mailer/notification/preview',
                     'super-mailer/logs' => 'super-mailer/logs/index',
+                    'super-mailer/logs/delete' => 'super-mailer/logs/delete',
+                    'super-mailer/logs/delete-all' => 'super-mailer/logs/delete-all',
+                    'super-mailer/logs/resend' => 'super-mailer/logs/resend',
                     'super-mailer/settings' => 'super-mailer/settings/index',
                 ]);
             }

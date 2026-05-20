@@ -7,22 +7,46 @@
     { label: "Super Mailer"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
 ] %}
 
+{% block actionButton %}
+    {% if logs %}
+        <form method="post" accept-charset="UTF-8" onsubmit="return confirm('{{ 'Delete all email logs?'|t('super-mailer')|e('js') }}');">
+            {{ actionInput('super-mailer/logs/delete-all') }}
+            {{ redirectInput('super-mailer/logs') }}
+            {{ csrfInput() }}
+            <button type="submit" class="btn">{{ "Delete all"|t('super-mailer') }}</button>
+        </form>
+    {% endif %}
+{% endblock %}
+
 {% block content %}
     {% if logs %}
+        <form method="post" accept-charset="UTF-8" id="super-mailer-log-bulk-form">
+            {{ redirectInput('super-mailer/logs') }}
+            {{ csrfInput() }}
+        </form>
+
+        <div class="buttons" style="margin-bottom:12px;">
+            <button type="submit" form="super-mailer-log-bulk-form" name="action" value="super-mailer/logs/resend" class="btn submit" data-resend-selected disabled>{{ "Resend selected"|t('super-mailer') }}</button>
+            <button type="submit" form="super-mailer-log-bulk-form" name="action" value="super-mailer/logs/delete" class="btn" data-delete-selected disabled>{{ "Delete selected"|t('super-mailer') }}</button>
+        </div>
+
         <table class="data fullwidth">
             <thead>
                 <tr>
+                    <th class="thin"><input type="checkbox" data-select-all-logs aria-label="{{ 'Select all logs'|t('super-mailer') }}"></th>
                     <th>{{ "Status"|t('super-mailer') }}</th>
                     <th>{{ "Subject"|t('super-mailer') }}</th>
                     <th>{{ "To"|t('super-mailer') }}</th>
                     <th>{{ "Event"|t('super-mailer') }}</th>
                     <th>{{ "Element"|t('super-mailer') }}</th>
                     <th>{{ "Date"|t('app') }}</th>
+                    <th>{{ "Actions"|t('app') }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in logs %}
                     <tr>
+                        <td><input type="checkbox" form="super-mailer-log-bulk-form" name="logIds[]" value="{{ log.id }}" data-log-checkbox aria-label="{{ 'Select log {id}'|t('super-mailer', { id: log.id }) }}"></td>
                         <td>
                             {% if log.status == 'success' %}
                                 <span class="status enabled"></span>{{ "Success"|t('super-mailer') }}
@@ -55,10 +79,81 @@
                             {% endif %}
                         </td>
                         <td>{{ log.dateCreated|datetime('short') }}</td>
+                        <td>
+                            <div class="buttons">
+                                <form method="post" accept-charset="UTF-8" style="display:inline-block;" onsubmit="return confirm('{{ 'Queue this email for resend?'|t('super-mailer')|e('js') }}');">
+                                    {{ actionInput('super-mailer/logs/resend') }}
+                                    {{ redirectInput('super-mailer/logs') }}
+                                    {{ csrfInput() }}
+                                    {{ hiddenInput('singleLogId', log.id) }}
+                                    <button type="submit" class="btn small">{{ "Resend"|t('super-mailer') }}</button>
+                                </form>
+                                <form method="post" accept-charset="UTF-8" style="display:inline-block;" onsubmit="return confirm('{{ 'Delete this email log?'|t('super-mailer')|e('js') }}');">
+                                    {{ actionInput('super-mailer/logs/delete') }}
+                                    {{ redirectInput('super-mailer/logs') }}
+                                    {{ csrfInput() }}
+                                    {{ hiddenInput('singleLogId', log.id) }}
+                                    <button type="submit" class="btn small">{{ "Delete"|t('app') }}</button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+
+        {% js %}
+            (() => {
+                const form = document.getElementById('super-mailer-log-bulk-form');
+                if (!form) {
+                    return;
+                }
+
+                const selectAll = document.querySelector('[data-select-all-logs]');
+                const checkboxes = Array.from(document.querySelectorAll('[data-log-checkbox]'));
+                const deleteSelected = document.querySelector('[data-delete-selected]');
+                const resendSelected = document.querySelector('[data-resend-selected]');
+
+                const update = () => {
+                    const checked = checkboxes.filter((checkbox) => checkbox.checked).length;
+                    deleteSelected.disabled = checked === 0;
+                    resendSelected.disabled = checked === 0;
+                    selectAll.checked = checked > 0 && checked === checkboxes.length;
+                    selectAll.indeterminate = checked > 0 && checked < checkboxes.length;
+                };
+
+                selectAll.addEventListener('change', () => {
+                    checkboxes.forEach((checkbox) => {
+                        checkbox.checked = selectAll.checked;
+                    });
+                    update();
+                });
+
+                checkboxes.forEach((checkbox) => {
+                    checkbox.addEventListener('change', update);
+                });
+
+                form.addEventListener('submit', (event) => {
+                    const submitter = event.submitter;
+                    if (submitter && submitter.matches('[data-resend-selected]')) {
+                        const checked = checkboxes.filter((checkbox) => checkbox.checked).length;
+                        if (!checked || !confirm('{{ 'Queue selected emails for resend?'|t('super-mailer')|e('js') }}')) {
+                            event.preventDefault();
+                        }
+                        return;
+                    }
+
+                    if (submitter && submitter.matches('[data-delete-selected]')) {
+                        const checked = checkboxes.filter((checkbox) => checkbox.checked).length;
+                        if (!checked || !confirm('{{ 'Delete selected email logs?'|t('super-mailer')|e('js') }}')) {
+                            event.preventDefault();
+                        }
+                    }
+                });
+
+                update();
+            })();
+        {% endjs %}
     {% else %}
         <div class="zilch">
             {{ "No email logs yet."|t('super-mailer') }}

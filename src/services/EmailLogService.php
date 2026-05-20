@@ -2,6 +2,7 @@
 namespace amici\SuperMailer\services;
 
 use amici\SuperMailer\elements\MailerNotification;
+use amici\SuperMailer\jobs\SendNotificationEmailJob;
 use amici\SuperMailer\Plugin;
 use amici\SuperMailer\records\EmailLogRecord;
 use Craft;
@@ -78,6 +79,77 @@ class EmailLogService extends Component
         return (int)Craft::$app->getDb()->createCommand()
             ->delete(EmailLogRecord::tableName())
             ->execute();
+    }
+
+    public function deleteByIds(array $ids): int
+    {
+        if (!$this->tableExists()) {
+            return 0;
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) {
+            return 0;
+        }
+
+        return (int)Craft::$app->getDb()->createCommand()
+            ->delete(EmailLogRecord::tableName(), ['id' => $ids])
+            ->execute();
+    }
+
+    public function resendByIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids || !$this->tableExists()) {
+            return ['queued' => 0, 'skipped' => 0];
+        }
+
+        $logs = EmailLogRecord::find()
+            ->where(['id' => $ids])
+            ->orderBy(['id' => SORT_ASC])
+            ->all();
+        $queued = 0;
+        $skipped = 0;
+
+        foreach ($logs as $log) {
+            if (!$log instanceof EmailLogRecord || !$log->notificationId || !$log->eventContext) {
+                $skipped++;
+                continue;
+            }
+
+            $notification = MailerNotification::find()
+                ->id((int)$log->notificationId)
+                ->status(null)
+                ->one();
+
+            if (!$notification instanceof MailerNotification || !$notification->enabledNotification) {
+                $skipped++;
+                continue;
+            }
+
+            try {
+                $context = json_decode($log->eventContext, true, 512, JSON_THROW_ON_ERROR);
+            } catch (Throwable) {
+                $skipped++;
+                continue;
+            }
+
+            if (!is_array($context)) {
+                $skipped++;
+                continue;
+            }
+
+            Craft::$app->getQueue()->push(new SendNotificationEmailJob([
+                'notificationId' => (int)$notification->id,
+                'eventContext' => $context,
+            ]));
+            $queued++;
+        }
+
+        return [
+            'queued' => $queued,
+            'skipped' => $skipped,
+        ];
     }
 
     public function count(): int

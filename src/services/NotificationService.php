@@ -154,8 +154,16 @@ class NotificationService extends Component
 
     private function conditionRulePasses(array $rule, array $context): bool
     {
-        $actual = $this->conditionValue((string)($rule['field'] ?? ''), $context);
+        $field = (string)($rule['field'] ?? '');
+        $actual = $this->conditionValue($field, $context);
         $expectedValues = $this->conditionExpectedValues((string)($rule['value'] ?? ''));
+
+        if ($field === 'element.status') {
+            $actual = $this->normalizeStatusConditionValue($actual);
+            $expectedValues = array_values(array_filter(
+                array_map(fn(string $value): ?string => $this->normalizeStatusConditionValue($value), $expectedValues)
+            ));
+        }
 
         if (($rule['operator'] ?? 'equals') === 'contains') {
             return in_array((string)$actual, $expectedValues, true);
@@ -170,13 +178,36 @@ class NotificationService extends Component
         $elementObject = $this->contextElement($context);
 
         return match ($field) {
-            'element.status' => ($element['enabled'] ?? false) ? 'enabled' : 'disabled',
+            'element.status' => $this->statusConditionValue($element),
             'event.isNew' => !empty($context['isNew']) ? 'true' : 'false',
             'element.siteId' => isset($element['siteId']) ? (string)$element['siteId'] : null,
             'entry.authorId' => $elementObject instanceof Entry ? (string)$elementObject->authorId : ($element['authorId'] ?? null),
             'entry.type.handle' => $elementObject instanceof Entry ? ($elementObject->type->handle ?? null) : null,
             'entry.section.handle' => $elementObject instanceof Entry ? ($elementObject->section->handle ?? null) : null,
             default => null,
+        };
+    }
+
+    private function statusConditionValue(array $element): string
+    {
+        if (array_key_exists('enabled', $element)) {
+            return !empty($element['enabled']) ? 'enabled' : 'disabled';
+        }
+
+        return $this->normalizeStatusConditionValue($element['status'] ?? null) ?? 'disabled';
+    }
+
+    private function normalizeStatusConditionValue(mixed $value): ?string
+    {
+        if (is_bool($value)) {
+            return $value ? 'enabled' : 'disabled';
+        }
+
+        $value = strtolower(trim((string)$value));
+        return match ($value) {
+            '1', 'true', 'yes', 'on', 'enabled', 'live' => 'enabled',
+            '0', 'false', 'no', 'off', 'disabled' => 'disabled',
+            default => $value !== '' ? $value : null,
         };
     }
 
