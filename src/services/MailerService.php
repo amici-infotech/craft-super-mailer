@@ -3,6 +3,7 @@ namespace amici\SuperMailer\services;
 
 use amici\SuperMailer\behaviors\ElementContextBehavior;
 use amici\SuperMailer\elements\MailerNotification;
+use amici\SuperMailer\models\EventContext;
 use amici\SuperMailer\Plugin;
 use amici\SuperMailer\records\EmailLogRecord;
 use Craft;
@@ -100,7 +101,8 @@ class MailerService extends Component
                 'html' => $htmlError,
                 'text' => $textError,
             ]),
-            'context' => $context,
+            'context' => $variables['event']->previewVariables(),
+            'rawContext' => $context,
         ];
     }
 
@@ -173,17 +175,11 @@ class MailerService extends Component
         ];
     }
 
-    private function renderEventContext(array $eventContext): array
+    private function renderEventContext(array $eventContext): EventContext
     {
-        $renderEvent = $eventContext;
         $element = $this->contextElement($eventContext['element'] ?? null);
 
-        if ($element) {
-            $renderEvent['element'] = $element;
-            $renderEvent['sender'] = $element;
-        }
-
-        return $renderEvent;
+        return new EventContext($eventContext, $element);
     }
 
     private function contextElement(mixed $elementData): ?Element

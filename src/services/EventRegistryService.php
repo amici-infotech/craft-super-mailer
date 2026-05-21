@@ -5,6 +5,8 @@ use Craft;
 use craft\base\Element;
 use craft\services\Elements;
 use ReflectionClass;
+use Solspace\Freeform\Elements\Submission as FreeformSubmission;
+use Solspace\Freeform\Events\Submissions\ProcessSubmissionEvent;
 use Throwable;
 use yii\base\Component;
 
@@ -172,6 +174,10 @@ class EventRegistryService extends Component
 
     private function isContentManagementEvent(string $class, string $constant, string $eventName): bool
     {
+        if ($this->isKnownPluginContentEvent($class, $constant, $eventName)) {
+            return true;
+        }
+
         if (!str_starts_with($constant, 'EVENT_AFTER_')) {
             return false;
         }
@@ -185,6 +191,14 @@ class EventRegistryService extends Component
         }
 
         return false;
+    }
+
+    private function isKnownPluginContentEvent(string $class, string $constant, string $eventName): bool
+    {
+        return class_exists(FreeformSubmission::class)
+            && $class === FreeformSubmission::class
+            && $constant === 'EVENT_PROCESS_SUBMISSION'
+            && $eventName === FreeformSubmission::EVENT_PROCESS_SUBMISSION;
     }
 
     private function isElementLifecycleConstant(string $constant, string $eventName): bool
@@ -253,7 +267,8 @@ class EventRegistryService extends Component
                     'class' => $class,
                     'constant' => $name,
                     'eventName' => $value,
-                    'eventType' => $this->eventTypeFromReflectionConstant($constant),
+                    'eventType' => $this->knownPluginEventType($class, $name, $value)
+                        ?? $this->eventTypeFromReflectionConstant($constant),
                 ];
             }
 
@@ -357,6 +372,7 @@ class EventRegistryService extends Component
 
         $namespace = $this->namespaceFromContents($contents);
         $uses = $this->usesFromContents($contents);
+        $class = $this->classNameFromFile($file) ?? '';
         preg_match_all(
             '/(?:(\/\*\*.*?\*\/)\s*)?(?:public|protected|private)?\s*const\s+(EVENT_[A-Z0-9_]+)\s*=\s*([\'"])(.*?)\3\s*;/s',
             $contents,
@@ -370,7 +386,8 @@ class EventRegistryService extends Component
                 $eventType = $this->eventTypeFromDocblock($match[1] ?? '', $namespace, $uses);
                 $constants[$match[2]] = [
                     'eventName' => stripcslashes($match[4]),
-                    'eventType' => $eventType,
+                    'eventType' => $this->knownPluginEventType($class, $match[2], stripcslashes($match[4]))
+                        ?? $eventType,
                 ];
             }
         }
@@ -418,6 +435,21 @@ class EventRegistryService extends Component
         }
 
         return \yii\base\Event::class;
+    }
+
+    private function knownPluginEventType(string $class, string $constant, string $eventName): ?string
+    {
+        if (
+            class_exists(FreeformSubmission::class)
+            && class_exists(ProcessSubmissionEvent::class)
+            && $class === FreeformSubmission::class
+            && $constant === 'EVENT_PROCESS_SUBMISSION'
+            && $eventName === FreeformSubmission::EVENT_PROCESS_SUBMISSION
+        ) {
+            return ProcessSubmissionEvent::class;
+        }
+
+        return null;
     }
 
     private function eventTypeFromReflectionConstant(\ReflectionClassConstant $constant): string
@@ -506,6 +538,28 @@ class EventRegistryService extends Component
                     'description' => $this->propertyDescription($property->getDocComment() ?: ''),
                 ];
             }
+
+            foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                if ($method->isStatic() || $method->getNumberOfRequiredParameters() > 0) {
+                    continue;
+                }
+
+                $methodName = $method->getName();
+                if (!str_starts_with($methodName, 'get')) {
+                    continue;
+                }
+
+                $name = '$event->' . $methodName . '()';
+                if ($this->hasVariable($variables, $name)) {
+                    continue;
+                }
+
+                $variables[] = [
+                    'name' => $name,
+                    'type' => $method->hasReturnType() ? (string)$method->getReturnType() : 'mixed',
+                    'description' => $this->methodDescription($method->getDocComment() ?: ''),
+                ];
+            }
         } catch (Throwable) {
         }
 
@@ -517,6 +571,15 @@ class EventRegistryService extends Component
     private function propertyDescription(string $docblock): string
     {
         if (preg_match('/@var\s+[^\s]+\s+(.+)/', $docblock, $match)) {
+            return trim($match[1]);
+        }
+
+        return '';
+    }
+
+    private function methodDescription(string $docblock): string
+    {
+        if (preg_match('/@return\s+[^\s]+\s+(.+)/', $docblock, $match)) {
             return trim($match[1]);
         }
 

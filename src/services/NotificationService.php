@@ -275,6 +275,20 @@ class NotificationService extends Component
             }
         }
 
+        foreach (['getElement', 'getEntry', 'getAsset', 'getCategory', 'getUser', 'getSubmission'] as $method) {
+            if (!method_exists($event, $method)) {
+                continue;
+            }
+
+            try {
+                $value = $event->{$method}();
+                if ($value instanceof Element) {
+                    return $value;
+                }
+            } catch (Throwable) {
+            }
+        }
+
         if ($event->sender instanceof Element) {
             return $event->sender;
         }

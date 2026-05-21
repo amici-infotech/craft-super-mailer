@@ -33,6 +33,9 @@
     {% endif %}
     <pre style="white-space:pre-wrap;">{{ preview.text }}</pre>
 
-    <h2>{{ "Event Context"|t('super-mailer') }}</h2>
+    <h2>{{ "Template Variables"|t('super-mailer') }}</h2>
     <pre style="white-space:pre-wrap;">{{ preview.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+
+    <h2>{{ "Raw Event Context"|t('super-mailer') }}</h2>
+    <pre style="white-space:pre-wrap;">{{ preview.rawContext|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
 {% endblock %}
