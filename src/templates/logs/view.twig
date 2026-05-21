@@ -1,6 +1,6 @@
 {% extends "_layouts/cp" %}
 
-{% set title = "Email Log #{id}"|t('super-mailer', { id: log.id }) %}
+{% set title = "Email Log {id}"|t('super-mailer', { id: log.id }) %}
 {% set selectedNavItem = 'super-mailer' %}
 {% set selectedSubnavItem = 'logs' %}
 {% set crumbs = [
