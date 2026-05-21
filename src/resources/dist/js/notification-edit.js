@@ -41,6 +41,8 @@
     var currentCode = '';
     var currentEventMatches = [];
     var activeEventIndex = -1;
+    var currentSelectedEvent = null;
+    var entryOnlyConditionFields = ['entry.section.handle', 'entry.type.handle'];
 
     function escapeHtml(value) {
         return String(value || '').replace(/[&<>"']/g, function(char) {
@@ -168,6 +170,8 @@
         selectedEvent.innerHTML = '<strong>' + escapeHtml(event.class + '::' + event.constant) + '</strong>' +
             '<code>' + escapeHtml(event.eventName + ' | ' + event.eventType) + '</code>';
         baseCode = event.code || '';
+        currentSelectedEvent = event;
+        refreshConditionFieldOptions();
         updateCodePreview();
         variables.innerHTML = '<ul class="super-mailer-event-variables">' + (event.variables || []).map(function(variable) {
             return '<li><code>' + escapeHtml(variable.name) + '</code>' +
@@ -190,6 +194,43 @@
         });
 
         return option ? option.label : field;
+    }
+
+    function isEntryEvent(event) {
+        return event && event.class === 'craft\\elements\\Entry';
+    }
+
+    function conditionOptionsForCurrentEvent() {
+        return conditionFieldOptions.filter(function(option) {
+            return isEntryEvent(currentSelectedEvent) || entryOnlyConditionFields.indexOf(option.value) === -1;
+        });
+    }
+
+    function conditionFieldOptionsHtml(selectedValue) {
+        return conditionOptionsForCurrentEvent().map(function(option) {
+            return '<option value="' + escapeHtml(option.value) + '"' + (selectedValue === option.value ? ' selected' : '') + '>' + escapeHtml(option.label) + '</option>';
+        }).join('');
+    }
+
+    function refreshConditionFieldOptions() {
+        if (!conditionTable) {
+            return;
+        }
+
+        conditionTable.querySelectorAll('[data-condition-row]').forEach(function(row) {
+            var field = row.querySelector('[name$="[field]"]');
+            if (!field) {
+                return;
+            }
+
+            var currentValue = field.value;
+            var availableOptions = conditionOptionsForCurrentEvent();
+            var isAvailable = availableOptions.some(function(option) {
+                return option.value === currentValue;
+            });
+            field.innerHTML = conditionFieldOptionsHtml(isAvailable ? currentValue : (availableOptions[0] ? availableOptions[0].value : ''));
+            syncConditionRow(row, !isAvailable);
+        });
     }
 
     function collectConditionRules() {
@@ -572,13 +613,13 @@
     function createConditionRow(rule) {
         var index = conditionTable.querySelectorAll('[data-condition-row]').length;
         var row = document.createElement('div');
+        var options = conditionOptionsForCurrentEvent();
+        var selectedField = rule && rule.field ? rule.field : (options[0] ? options[0].value : '');
         row.className = 'super-mailer-condition-row';
         row.setAttribute('data-condition-row', '');
         row.innerHTML = '<div class="super-mailer-condition-cell super-mailer-condition-field-cell">' +
             '<div class="select fullwidth">' +
-            '<select name="conditionRules[' + index + '][field]" class="super-mailer-condition-field-input">' + conditionFieldOptions.map(function(option) {
-            return '<option value="' + escapeHtml(option.value) + '"' + (rule && rule.field === option.value ? ' selected' : '') + '>' + escapeHtml(option.label) + '</option>';
-        }).join('') + '</select>' +
+            '<select name="conditionRules[' + index + '][field]" class="super-mailer-condition-field-input">' + conditionFieldOptionsHtml(selectedField) + '</select>' +
             '</div>' +
             '</div>' +
             '<div class="super-mailer-condition-cell super-mailer-condition-operator" data-operator-cell></div>' +
@@ -590,8 +631,18 @@
     }
 
     if (conditionTable) {
+        currentSelectedEvent = findByValue(currentValue);
         conditionTable.querySelectorAll('[data-condition-row]').forEach(function(row) {
-            syncConditionRow(row, false);
+            var field = row.querySelector('[name$="[field]"]');
+            var isAvailable = true;
+            if (field) {
+                var currentField = field.value;
+                isAvailable = conditionOptionsForCurrentEvent().some(function(option) {
+                    return option.value === currentField;
+                });
+                field.innerHTML = conditionFieldOptionsHtml(isAvailable ? currentField : '');
+            }
+            syncConditionRow(row, !isAvailable);
         });
         conditionTable.addEventListener('change', function(event) {
             var row = event.target.closest('[data-condition-row]');
@@ -665,7 +716,8 @@
 
     if (addConditionButton && conditionTable) {
         addConditionButton.addEventListener('click', function() {
-            createConditionRow({field: conditionFieldOptions[0] ? conditionFieldOptions[0].value : '', value: ''});
+            var options = conditionOptionsForCurrentEvent();
+            createConditionRow({field: options[0] ? options[0].value : '', value: ''});
         });
     }
 

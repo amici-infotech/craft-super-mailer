@@ -43,8 +43,8 @@ Available fields:
 - **Status**: enabled/disabled element state.
 - **Is New**: whether Super Mailer considers the event a new element/content event.
 - **Site ID**: element site ID.
-- **Section Handle**: entry section handle.
-- **Entry Type Handle**: entry type handle.
+- **Section Handle**: entry section handle; only shown for Entry events.
+- **Entry Type Handle**: entry type handle; only shown for Entry events.
 - **Author**: one or more Craft users.
 
 ## Match Mode

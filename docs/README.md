@@ -10,7 +10,7 @@ Read the full documentation at [docs.amiciinfotech.com/craft-cms/super-mailer](h
 
 - [Installation and Setup](installation.md) - install the plugin, enable it, and run migrations.
 - [Core Concepts](concepts.md) - understand notifications, events, contexts, conditions, queues, and logs.
-- [Control Panel Guide](control-panel.md) - Notifications, Logs, Settings, permissions, and read-only environments.
+- [Control Panel Guide](control-panel.md) - Notifications, Logs, Settings and permissions.
 - [Creating Notifications](notifications.md) - create, duplicate, disable, restore, and configure notifications.
 
 ## Developer Reference

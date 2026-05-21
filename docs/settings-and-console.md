@@ -14,25 +14,6 @@ Available settings:
 
 Set retention to `0` to disable automatic purging.
 
-## Read-Only Environments
-
-Super Mailer follows Craft's `allowAdminChanges` behavior.
-
-[Screenshot for Read-Only Environment Settings Page]
-Add a screenshot of the same settings page with `allowAdminChanges` disabled, showing Craft's read-only notice and disabled fields.
-
-When `allowAdminChanges` is false:
-
-- The settings page shows Craft's read-only notice.
-- Settings fields are disabled.
-- The save action is blocked server-side.
-
-Example Craft config:
-
-```php
-'allowAdminChanges' => false,
-```
-
 ## Console Commands
 
 ### Purge Logs by Retention
