@@ -5,7 +5,7 @@ Super Mailer adds event-driven email notifications to Craft CMS. Create Control 
 ## Features
 
 - Create email notifications from the Craft Control Panel.
-- Choose from Craft element lifecycle events and supported plugin events such as Formie and Freeform submissions.
+- Choose from Craft element lifecycle events and supported third-party plugin events such as form submission events.
 - Send HTML and/or plain text templates from the site templates folder.
 - Use Twig in subjects, recipients, sender fields, and email templates.
 - Add condition rows and optional PHP expressions before a notification queues.

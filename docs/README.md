@@ -15,7 +15,7 @@ Read the full documentation at [docs.amiciinfotech.com/craft-cms/super-mailer](h
 
 ## Developer Reference
 
-- [Email Templates](templates.md) - Twig variables, event context, entry, Formie, and Freeform examples.
+- [Email Templates](templates.md) - Twig variables, event context, entry, and third-party submission examples.
 - [Events and Conditions](events-and-conditions.md) - event picker, condition rows, PHP conditions, supported event context.
 - [Preview and Test Send](preview-and-test-send.md) - preview output, condition debug, recipient preview, and test sends.
 - [Logs and Resending](logs-and-resending.md) - delivery logs, detail pages, resends, deletes, and retention.

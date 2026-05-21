@@ -19,8 +19,8 @@ Each notification listens to one event. Super Mailer discovers supported event c
 Examples:
 
 - Craft element save/delete/restore events.
-- Formie submission element events.
-- Freeform submission processing events.
+- Third-party form submission element events.
+- Third-party submission processing events.
 - Custom element events from installed plugins when they follow Craft event patterns.
 
 ## Event Context

@@ -48,7 +48,7 @@ You can also use getter-style access:
 <p>Updated: {{ entry.dateUpdated|datetime }}</p>
 ```
 
-## Freeform Submission Example
+## Third-Party Submission Getter Example
 
 ```twig
 {% set submission = event.getSubmission() %}
@@ -67,12 +67,12 @@ Equivalent aliases:
 {{ event.element.form.name }}
 ```
 
-## Formie Submission Example
+## Third-Party Submission Element Example
 
 ```twig
 {% set submission = event.element %}
 
-<h1>New Formie submission</h1>
+<h1>New form submission</h1>
 <p>{{ submission.title }}</p>
 
 {% if submission.form ?? false %}

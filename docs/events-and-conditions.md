@@ -8,8 +8,8 @@ Common examples:
 
 - `craft\services\Elements::EVENT_AFTER_SAVE_ELEMENT`
 - `craft\services\Elements::EVENT_AFTER_DELETE_ELEMENT`
-- Formie submission element save events.
-- `Solspace\Freeform\Elements\Submission::EVENT_PROCESS_SUBMISSION`
+- Third-party form submission element save events.
+- Third-party submission processing events.
 
 The event list is generated from installed Craft/plugin classes, so available options depend on the project.
 
@@ -20,7 +20,7 @@ The event picker shows PHP callback variables for the selected event. Email temp
 PHP condition example:
 
 ```php
-$event->getForm()->handle === 'contactForm'
+$event->getForm()->handle === 'contact'
 ```
 
 Twig template equivalent:
@@ -83,12 +83,12 @@ disabled, false, 0, no, off
 Use PHP conditions for advanced checks that cannot be expressed with condition rows.
 
 [Screenshot for PHP Condition Field]
-Add a screenshot of the Custom PHP Condition textarea with a realistic expression, for example a Freeform form handle check.
+Add a screenshot of the Custom PHP Condition textarea with a realistic expression, for example a third-party form handle check.
 
 Enter only the expression:
 
 ```php
-($event->getForm()->handle ?? null) === 'contactForm'
+($event->getForm()->handle ?? null) === 'contact'
 ```
 
 Super Mailer evaluates the expression as a boolean. Failed PHP conditions are logged as warnings and treated as false.

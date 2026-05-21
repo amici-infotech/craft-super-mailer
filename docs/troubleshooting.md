@@ -10,11 +10,7 @@ Check:
 - The event constant is discoverable.
 - The event is content-related or explicitly supported.
 
-Freeform submission support uses:
-
-```php
-Solspace\Freeform\Elements\Submission::EVENT_PROCESS_SUBMISSION
-```
+Supported third-party submission events depend on the installed plugin and the event classes it exposes.
 
 ## Preview Shows the Wrong Element
 

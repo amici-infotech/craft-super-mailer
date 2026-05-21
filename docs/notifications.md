@@ -28,7 +28,7 @@ Examples:
 
 ```text
 craft\services\Elements::EVENT_AFTER_SAVE_ELEMENT
-Solspace\Freeform\Elements\Submission::EVENT_PROCESS_SUBMISSION
+vendor\package\elements\Submission::EVENT_PROCESS_SUBMISSION
 ```
 
 The selected event controls which event is registered and what context will be available.
@@ -68,7 +68,7 @@ Template paths are relative to the Craft site templates folder:
 Add a screenshot of the notification editor's recipient, sender, subject, HTML template path, and plain text template path fields filled with realistic values.
 
 ```text
-super-mailer/freeform-contact-form
+super-mailer/contact-form-submission
 _emails/entry-updated
 ```
 

@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Initial Craft CMS 5 release.
 - Added the `MailerNotification` custom element for Control Panel managed email notifications.
-- Added event selection for Craft element lifecycle events and supported plugin events, including Formie and Freeform submissions.
+- Added event selection for Craft element lifecycle events and supported third-party plugin submission events.
 - Added HTML and plain text template path support using Craft site templates.
 - Added Twig rendering for recipients, sender fields, subjects, and templates.
 - Added condition rows with status, site, entry section/type, author, and new element checks.
@@ -39,7 +39,7 @@ All notable changes to this project will be documented in this file.
 - Preview and log detail pages use card-based Craft Control Panel styling.
 
 ### Fixed
-- Fixed Formie and Freeform preview contexts showing unrelated sample entry data.
+- Fixed third-party submission preview contexts showing unrelated sample entry data.
 - Fixed preview rendering errors being hidden.
 - Fixed condition row values being reset after save.
 - Fixed keyboard navigation in the event picker.
@@ -52,4 +52,4 @@ All notable changes to this project will be documented in this file.
 - Fixed mask icon placement.
 - Fixed single-row log delete actions.
 - Fixed condition toggle visual state and saved values.
-- Fixed missing Freeform submission event support.
+- Fixed missing support for a third-party submission processing event.
