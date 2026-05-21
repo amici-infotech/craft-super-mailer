@@ -15,20 +15,21 @@ The event list is generated from installed Craft/plugin classes, so available op
 
 ## Event Variables
 
-The event picker shows PHP callback variables for the selected event. Email templates receive a Twig-friendly render context.
+The event picker shows PHP callback variables for the selected event. Super Mailer exposes the selected event's available `$event` data to email templates through the Twig `event` variable when that data can be normalized or rehydrated.
 
 PHP condition example:
 
 ```php
-$event->getForm()->handle === 'contact'
+$event->sender instanceof \craft\base\Element
 ```
 
-Twig template equivalent:
+Twig template example:
 
 ```twig
-{{ event.getForm().handle }}
-{{ event.form.handle }}
+{{ event.element.title ?? event.sender.title ?? null }}
 ```
+
+Exact available properties depend on the event you select. Use the preview page's **Template Variables** panel to confirm what can be used for that notification.
 
 ## Condition Rows
 
@@ -83,12 +84,12 @@ disabled, false, 0, no, off
 Use PHP conditions for advanced checks that cannot be expressed with condition rows.
 
 [Screenshot for PHP Condition Field]
-Add a screenshot of the Custom PHP Condition textarea with a realistic expression, for example a third-party form handle check.
+Add a screenshot of the Custom PHP Condition textarea with a realistic expression using the selected event's `$event` object.
 
 Enter only the expression:
 
 ```php
-($event->getForm()->handle ?? null) === 'contact'
+($event->sender->siteId ?? null) === 1
 ```
 
 Super Mailer evaluates the expression as a boolean. Failed PHP conditions are logged as warnings and treated as false.

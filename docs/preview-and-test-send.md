@@ -50,19 +50,15 @@ Add a screenshot of the preview page showing the Message card, Recipients card, 
 Template variables show what Twig templates can use:
 
 [Screenshot for Template Variables Panel]
-Add a screenshot of the Template Variables card showing `event.element`, `event.getForm()`, `event.getSubmission()`, and other available values.
+Add a screenshot of the Template Variables card showing the values available for the selected notification event.
 
 ```twig
 event.element
 event.getElement()
-event.submission
-event.getSubmission()
-event.form
-event.getForm()
 event.data
 ```
 
-Availability depends on the selected event and element type.
+Availability depends on the selected event and element type. Do not assume every notification has the same event properties.
 
 ## Raw Event Context
 

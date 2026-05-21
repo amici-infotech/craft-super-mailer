@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
 - Added dynamic event preview with real matching elements where possible.
 - Added support for previewing a specific element with the `id` query parameter.
 - Added event context rehydration so templates receive a real `event.element` object during preview and queued delivery.
-- Added Twig-facing event helpers such as `event.getElement()`, `event.getSubmission()`, `event.getForm()`, and matching property aliases where available.
+- Added Twig-facing event helpers such as `event.getElement()` and normalized event properties where available.
 - Added duplicate, enable/disable, delete, and restore actions for notification elements.
 - Added delivery logging for success and failure attempts.
 - Added detailed failure logging with exception traces and recent mailer errors.

@@ -32,12 +32,11 @@ In templates, you can use:
 ```twig
 {{ event.element.title }}
 {{ event.getElement().title }}
-{{ event.form.name ?? null }}
-{{ event.getForm().name ?? null }}
+{{ event.eventName }}
 {{ rawEventContext|json_encode }}
 ```
 
-`rawEventContext` is the stored queue payload. `event` is the template-facing render context.
+`rawEventContext` is the stored queue payload. `event` is the template-facing render context. The selected notification event determines which values are available, so use the preview page's **Template Variables** panel as the source of truth for a specific notification.
 
 ## Conditions
 

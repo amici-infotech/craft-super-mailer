@@ -24,22 +24,22 @@ If no matching element exists, preview shows a warning in the raw context.
 
 ## Template Variable Does Not Work
 
-The event picker displays PHP callback variables. Email templates use Twig variables.
+The event picker displays PHP callback variables for the selected event. Email templates use the Twig `event` variable, which contains the selected event's normalized data where available.
 
 PHP:
 
 ```php
-$event->getForm()->handle
+$event->sender
 ```
 
 Twig:
 
 ```twig
-{{ event.getForm().handle }}
-{{ event.form.handle }}
+{{ event.sender }}
+{{ event.element.title ?? null }}
 ```
 
-Use preview's **Template Variables** section to see what is available for the selected event.
+Use preview's **Template Variables** section to see exactly what is available for the selected notification event. Not every event exposes the same properties.
 
 ## Email Sends for Drafts
 

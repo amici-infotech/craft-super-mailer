@@ -54,10 +54,10 @@ Twig is supported:
 
 Leave **From Email** and **From Name** blank to use Craft's system email settings.
 
-Use **Reply To** when form submissions should reply to the submitter:
+Use **Reply To** when the selected event exposes an email address that should receive replies:
 
 ```twig
-{{ event.submission.email.value ?? null }}
+{{ event.element.email ?? null }}
 ```
 
 ## Templates

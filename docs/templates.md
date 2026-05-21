@@ -16,6 +16,8 @@ craft
 
 `event` is the template-facing context. `rawEventContext` is the serialized queue payload.
 
+The exact values available under `event` depend on the selected notification event. Super Mailer exposes the selected event's available `$event` data when it can be normalized, plus `event.element` for element-backed events. Use the preview page's **Template Variables** panel to confirm what a specific notification can use.
+
 ## Element Events
 
 For element-backed events:
@@ -48,37 +50,17 @@ You can also use getter-style access:
 <p>Updated: {{ entry.dateUpdated|datetime }}</p>
 ```
 
-## Third-Party Submission Getter Example
+## Third-Party Element Example
 
 ```twig
-{% set submission = event.getSubmission() %}
-{% set form = event.getForm() %}
+{% set element = event.element %}
 
-<h1>New submission for {{ form.name }}</h1>
-<p>Submission ID: {{ submission.id }}</p>
-<p>Status: {{ submission.status }}</p>
+<h1>{{ element.title ?? 'New submission' }}</h1>
+<p>Element ID: {{ element.id }}</p>
+<p>Element type: {{ element.type ?? element.className() ?? null }}</p>
 ```
 
-Equivalent aliases:
-
-```twig
-{{ event.submission.title }}
-{{ event.form.name }}
-{{ event.element.form.name }}
-```
-
-## Third-Party Submission Element Example
-
-```twig
-{% set submission = event.element %}
-
-<h1>New form submission</h1>
-<p>{{ submission.title }}</p>
-
-{% if submission.form ?? false %}
-    <p>Form: {{ submission.form.title ?? submission.form.name }}</p>
-{% endif %}
-```
+If the selected third-party event exposes additional data, use the preview page's **Template Variables** panel to see the available property names before using them in a template.
 
 ## Custom Fields
 
@@ -94,7 +76,7 @@ When the element can be rehydrated, `event.element` is a real Craft element obje
 ## Subject Example
 
 ```twig
-New submission for {{ event.getForm().name ?? event.element.title ?? 'Website' }}
+Notification for {{ event.element.title ?? event.eventName ?? 'Website' }}
 ```
 
 ## Recipient Example
@@ -106,7 +88,7 @@ New submission for {{ event.getForm().name ?? event.element.title ?? 'Website' }
 Multiple recipients:
 
 ```twig
-admin@example.com, {{ event.submission.email.value ?? '' }}
+admin@example.com, {{ event.element.email ?? '' }}
 ```
 
 ## Plain Text Fallback
