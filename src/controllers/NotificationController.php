@@ -7,6 +7,8 @@ use amici\SuperMailer\records\EmailLogRecord;
 use Craft;
 use craft\base\Element;
 use craft\db\Query;
+use craft\elements\User;
+use craft\helpers\Cp;
 use craft\helpers\Json;
 use craft\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -57,6 +59,7 @@ class NotificationController extends Controller
             'eventValue' => $eventValue,
             'conditionFieldOptions' => $this->conditionFieldOptions(),
             'conditionSuggestions' => $this->conditionSuggestions(),
+            'conditionAuthorOptions' => $this->conditionAuthorOptions($notification),
             'recentLogs' => $notification->id ? $this->recentLogs((int)$notification->id) : [],
         ]);
     }
@@ -259,6 +262,50 @@ class NotificationController extends Controller
             'entry.section.handle' => $sections,
             'entry.type.handle' => $entryTypes,
         ];
+    }
+
+    private function conditionAuthorOptions(MailerNotification $notification): array
+    {
+        $ids = [];
+        foreach ($notification->normalizedConditionRules() as $rule) {
+            if (($rule['field'] ?? null) !== 'entry.authorId') {
+                continue;
+            }
+
+            foreach (explode(',', (string)($rule['value'] ?? '')) as $id) {
+                $id = (int)trim($id);
+                if ($id > 0) {
+                    $ids[] = $id;
+                }
+            }
+        }
+
+        $ids = array_values(array_unique($ids));
+        if (!$ids) {
+            return [];
+        }
+
+        $users = User::find()
+            ->id($ids)
+            ->status(null)
+            ->all();
+        $options = [];
+
+        foreach ($users as $user) {
+            if (!$user instanceof User || !$user->id) {
+                continue;
+            }
+
+            $options[(string)$user->id] = [
+                'label' => (string)$user,
+                'html' => Cp::elementChipHtml($user, [
+                    'showActionMenu' => false,
+                    'showStatus' => true,
+                ]),
+            ];
+        }
+
+        return $options;
     }
 
     private function recentLogs(int $notificationId): array

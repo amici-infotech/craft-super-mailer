@@ -9,6 +9,7 @@ use craft\base\Element;
 use craft\elements\actions\Delete;
 use craft\elements\actions\Duplicate;
 use craft\elements\actions\Edit;
+use craft\elements\actions\Restore;
 use craft\elements\actions\SetStatus;
 use craft\elements\User;
 use craft\helpers\Html;
@@ -169,6 +170,7 @@ class MailerNotification extends Element
             ],
             Duplicate::class,
             Delete::class,
+            Restore::class,
         ];
     }
 

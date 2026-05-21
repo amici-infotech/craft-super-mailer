@@ -275,7 +275,8 @@
 
 .super-mailer-author-picker {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: 8px;
     min-width: 0;
 }
@@ -371,42 +372,22 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
 }
 
-.super-mailer-token {
+.super-mailer-author-chip {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 2px;
     max-width: 100%;
-    padding: 3px 7px;
-    border: 1px solid var(--hairline-color);
-    border-radius: 3px;
-    background: var(--gray-100);
-    color: var(--text-color);
-    font-size: 12px;
-    line-height: 18px;
 }
 
-.super-mailer-token button {
-    width: 12px;
-    height: 12px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
+.super-mailer-author-chip-element {
+    min-width: 0;
 }
 
-.super-mailer-token button::before {
-    display: block;
-    color: var(--gray-600);
-    content: "×";
-    font-size: 14px;
-    line-height: 12px;
-}
-
-.super-mailer-author-picker {
-    flex-wrap: wrap;
+.super-mailer-author-chip > .delete {
+    flex: 0 0 auto;
 }
 
 .super-mailer-log-detail {

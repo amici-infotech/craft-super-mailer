@@ -28,6 +28,7 @@
     var copiedLabel = data.copiedLabel || 'Copied';
     var conditionFieldOptions = Array.isArray(data.conditionFieldOptions) ? data.conditionFieldOptions : [];
     var conditionSuggestions = data.conditionSuggestions || {};
+    var conditionAuthorOptions = data.conditionAuthorOptions || {};
     var selectedEvent = generator.querySelector('.super-mailer-selected-event');
     var code = document.getElementById('eventExampleCode');
     var copyButton = document.getElementById('copyEventCode');
@@ -368,10 +369,13 @@
         }).filter(Boolean);
     }
 
-    function renderAuthorToken(value, label) {
-        return '<span class="super-mailer-token" data-token-value="' + escapeHtml(value) + '">' +
-            '<span>' + escapeHtml(label || value) + '</span>' +
-            '<button type="button" data-remove-token aria-label="Remove ' + escapeHtml(label || value) + '"></button>' +
+    function renderAuthorToken(value, label, html) {
+        label = label || value;
+        html = html || (conditionAuthorOptions[String(value)] && conditionAuthorOptions[String(value)].html) || '';
+
+        return '<span class="super-mailer-author-chip" data-token-value="' + escapeHtml(value) + '">' +
+            '<span class="super-mailer-author-chip-element">' + (html || '<span class="element small"><span class="label"><span class="title">' + escapeHtml(label) + '</span></span></span>') + '</span>' +
+            '<button type="button" class="delete icon" data-remove-token title="Remove ' + escapeHtml(label) + '" aria-label="Remove ' + escapeHtml(label) + '"></button>' +
             '</span>';
     }
 
@@ -443,7 +447,8 @@
         return '<div class="super-mailer-author-picker">' +
             '<input type="hidden" name="' + escapeHtml(name) + '" value="' + escapeHtml(values.join(', ')) + '">' +
             '<div class="super-mailer-author-tokens">' + values.map(function(id) {
-                return renderAuthorToken(id, 'Author ID: ' + id);
+                var author = conditionAuthorOptions[String(id)] || {};
+                return renderAuthorToken(id, author.label || ('Author ID: ' + id), author.html || '');
             }).join('') + '</div>' +
             '<button type="button" class="btn dashed" data-select-author>' + (values.length ? 'Add author' : 'Select author') + '</button>' +
             '<button type="button" class="delete icon' + (values.length ? '' : ' hidden') + '" data-clear-author title="Clear"></button>' +
@@ -483,9 +488,9 @@
         }
 
         Craft.createElementSelectorModal('craft\\elements\\User', {
-            multiSelect: false,
+            multiSelect: true,
             hideOnSelect: true,
-            modalTitle: 'Select author',
+            modalTitle: 'Select authors',
             onSelect: function(selected) {
                 var elements = Array.isArray(selected) ? selected : [selected];
                 elements = elements.filter(Boolean);
@@ -503,7 +508,7 @@
                 elements.forEach(function(element) {
                     if (selectedValues.indexOf(String(element.id)) === -1) {
                         selectedValues.push(String(element.id));
-                        tokens.insertAdjacentHTML('beforeend', renderAuthorToken(element.id, element.label || element.title || ('Author ID: ' + element.id)));
+                        tokens.insertAdjacentHTML('beforeend', renderAuthorToken(element.id, element.label || element.title || ('Author ID: ' + element.id), element.html || element.chip || ''));
                     }
                 });
                 if (hiddenValue) {
