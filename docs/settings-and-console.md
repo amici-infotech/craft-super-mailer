@@ -4,8 +4,7 @@
 
 Go to **Super Mailer -> Settings**.
 
-[Screenshot for General Settings Page]
-Add a screenshot of the Super Mailer settings page showing Plugin Name and Email Log Retention fields in an editable environment.
+![General Settings](images/sm-settings.png)
 
 Available settings:
 

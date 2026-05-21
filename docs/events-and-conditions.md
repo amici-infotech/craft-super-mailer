@@ -35,8 +35,7 @@ Exact available properties depend on the event you select. Use the preview page'
 
 Condition rows are evaluated before a queue job is pushed.
 
-[Screenshot for Condition Rows]
-Add a screenshot of the condition builder with multiple rows, such as Status enabled, Is New enabled, Site ID, and Author with multiple selected user chips.
+![Notification Form Conditions](images/sm-notificaiton-form-conditions.png)
 
 Available fields:
 
@@ -57,12 +56,6 @@ Use **Any condition can match** when at least one row can pass.
 
 Author conditions can include multiple users. The saved value is a comma-separated ID list and the condition uses `contains`.
 
-[Screenshot for Author Condition Picker]
-Add a screenshot of the Craft user selector modal used from the Author condition row with multiple users selected.
-
-[Screenshot for Saved Author Chips]
-Add a screenshot of a reloaded notification edit page showing saved Author condition users rendered as Craft-style element chips.
-
 ## Status Conditions
 
 Craft entries can return statuses such as `live`, while other element types may return `enabled`. Super Mailer normalizes these values for enabled/disabled comparisons.
@@ -81,12 +74,7 @@ disabled, false, 0, no, off
 
 ## PHP Conditions
 
-Use PHP conditions for advanced checks that cannot be expressed with condition rows.
-
-[Screenshot for PHP Condition Field]
-Add a screenshot of the Custom PHP Condition textarea with a realistic expression using the selected event's `$event` object.
-
-Enter only the expression:
+Use PHP conditions for advanced checks that cannot be expressed with condition rows. Enter only the expression:
 
 ```php
 ($event->sender->siteId ?? null) === 1
@@ -102,8 +90,7 @@ Super Mailer ignores drafts, revisions, derivative elements, and provisional dra
 
 The preview page includes a condition debug table showing:
 
-[Screenshot for Condition Debug]
-Add a screenshot of the preview page's Condition Debug card showing passing and failing condition rows.
+![Condition Debug](images/sm-notificaiton-form-conditions.png)
 
 - Field.
 - Expected value.

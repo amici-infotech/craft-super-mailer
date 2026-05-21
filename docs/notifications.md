@@ -2,8 +2,13 @@
 
 ## Basic Notification
 
-[Screenshot for New Notification Page]
-Add a screenshot of the blank **New Notification** page before an event is selected, showing the title/handle fields and event search input.
+![Notification Form 1](images/sm-notification-form-1.png)
+
+![Notification Form 2](images/sm-notification-form-2.png)
+
+![Notification Form 3](images/sm-notification-form-3.png)
+
+![Notification Form 4](images/sm-notification-form-4.png)
 
 1. Go to **Super Mailer -> Notifications**.
 2. Click **New Notification**.
@@ -21,8 +26,7 @@ Add a screenshot of the blank **New Notification** page before an event is selec
 
 Start typing a class name, event constant, or event name.
 
-[Screenshot for Event Picker Search]
-Add a screenshot of the event picker dropdown while searching, showing multiple matching event options and keyboard-highlighted selection.
+![Selecting Events](images/sm-notification-selecting-events.png)
 
 Examples:
 
@@ -33,8 +37,7 @@ vendor\package\elements\Submission::EVENT_PROCESS_SUBMISSION
 
 The selected event controls which event is registered and what context will be available.
 
-[Screenshot for Selected Event Details]
-Add a screenshot after selecting an event, showing the selected event summary, generated example listener code, and available event variables.
+![After Select Event](images/sm-notification-after-select-events.png)
 
 ## Recipients
 
@@ -64,9 +67,6 @@ Use **Reply To** when the selected event exposes an email address that should re
 
 Template paths are relative to the Craft site templates folder:
 
-[Screenshot for Email Configuration Fields]
-Add a screenshot of the notification editor's recipient, sender, subject, HTML template path, and plain text template path fields filled with realistic values.
-
 ```text
 super-mailer/contact-form-submission
 _emails/entry-updated
@@ -78,9 +78,6 @@ You can configure HTML, plain text, or both.
 
 Disabled notifications do not register active sends. Use the element index status action or the editor details sidebar.
 
-[Screenshot for Enabled Sidebar]
-Add a screenshot of the notification editor sidebar showing the Enabled lightswitch and Preview URL block.
-
 ## Duplicate
 
 Duplicate an existing notification to reuse event, recipient, condition, and template settings. The copied notification receives a unique title and handle.
@@ -88,6 +85,3 @@ Duplicate an existing notification to reuse event, recipient, condition, and tem
 ## Delete and Restore
 
 Notifications are Craft elements and use Craft's soft-delete flow. Deleted notifications can be restored from the trashed source in the element index.
-
-[Screenshot for Trashed Notifications Restore]
-Add a screenshot of the notification element index filtered to trashed notifications with the restore action visible.

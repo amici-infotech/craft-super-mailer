@@ -6,8 +6,7 @@ Super Mailer records each email send attempt.
 
 Go to **Super Mailer -> Logs**.
 
-[Screenshot for Logs Index]
-Add a screenshot of the Logs index showing mixed success and failed send rows, bulk checkboxes, Resend selected, Delete selected, row Resend/Delete buttons, and the Delete all button.
+![Logs Index page](images/sm-log-index-table.png)
 
 The log index shows:
 
@@ -25,11 +24,9 @@ Click the subject to open the detail page.
 
 The detail page shows:
 
-[Screenshot for Successful Log Detail]
-Add a screenshot of a successful log detail page showing the summary header, Message card, Recipients card, rendered message, and event context.
+![Successful Sent Email log](images/sm-log-detail-success.png)
 
-[Screenshot for Failed Log Detail]
-Add a screenshot of a failed log detail page showing the failed status, error panel with stack trace, and stored event context.
+![Failed Email log](images/sm-log-detail-failed.png)
 
 - Status summary.
 - Event and element reference.
@@ -46,9 +43,6 @@ Rendered output is recalculated from the stored event context and current notifi
 
 You can resend:
 
-[Screenshot for Resend Confirmation]
-Add a screenshot of the browser confirmation prompt for resending a single log or selected logs.
-
 - A single log from the index.
 - A single log from the detail page.
 - Selected logs from the index.
@@ -58,9 +52,6 @@ Resends are queued through Craft's queue and use the original stored event conte
 ## Delete Logs
 
 You can delete:
-
-[Screenshot for Delete Confirmation]
-Add a screenshot of the browser confirmation prompt for deleting a single log, selected logs, or all logs.
 
 - A single log.
 - Selected logs.
