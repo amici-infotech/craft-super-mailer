@@ -4,8 +4,7 @@
 
 Go to **Super Mailer -> Notifications** to manage notification elements.
 
-[Screenshot for Notifications Index]
-Add a screenshot of **Super Mailer -> Notifications** showing the element index with notification rows, status indicators, event column, preview link, and action menu.
+![Field in backend form](images/sm-notifications-list.png)
 
 From the element index you can:
 
