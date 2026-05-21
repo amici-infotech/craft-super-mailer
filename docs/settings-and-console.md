@@ -66,5 +66,5 @@ Or use a supervisor-managed worker.
 Super Mailer uses Craft's configured mailer transport. Test the Craft mailer before debugging Super Mailer sends:
 
 ```bash
-php craft mailer/test to@example.com
+php craft mailer/test --to=to@example.com
 ```

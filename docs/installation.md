@@ -43,7 +43,7 @@ Users with view access can inspect notifications and logs. Users with manage acc
 Super Mailer sends through Craft's configured mailer. Confirm Craft's email settings work first:
 
 ```bash
-php craft mailer/test to@example.com
+php craft mailer/test --to=to@example.com
 ```
 
 If the Craft mailer cannot send, Super Mailer logs will also show delivery failures.

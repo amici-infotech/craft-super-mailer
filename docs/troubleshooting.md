@@ -79,7 +79,7 @@ Check the log detail page. Super Mailer stores recent Craft mailer errors when a
 Also test Craft's mailer directly:
 
 ```bash
-php craft mailer/test to@example.com
+php craft mailer/test --to=to@example.com
 ```
 
 ## Queue Does Not Send
