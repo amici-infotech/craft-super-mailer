@@ -66,8 +66,7 @@ Use `?id=123` on the preview URL to preview against a specific matching element 
 
 Go to **Super Mailer -> Logs** to review the latest send attempts.
 
-[Screenshot for Logs Index]
-Add a screenshot of **Super Mailer -> Logs** showing success/failed rows, subjects linked to detail pages, recipient/event/element columns, and resend/delete actions.
+![Logs Index page](images/sm-log-index-table.png)
 
 From the log index you can:
 
@@ -81,16 +80,10 @@ From the log index you can:
 
 Go to **Super Mailer -> Settings** to configure:
 
-[Screenshot for Settings Page]
-Add a screenshot of **Super Mailer -> Settings** showing plugin name and email log retention fields.
+![General Settings](images/sm-settings.png)
 
 - Plugin name shown in the CP navigation.
 - Email log retention days.
-
-When Craft's `allowAdminChanges` config setting is false, the settings screen follows Craft's read-only pattern and disables editing.
-
-[Screenshot for Read-Only Settings Page]
-Add a screenshot of the settings page when `allowAdminChanges` is false, showing Craft's "Changes to these settings aren't permitted in this environment." notice and disabled fields.
 
 ## Permissions
 
