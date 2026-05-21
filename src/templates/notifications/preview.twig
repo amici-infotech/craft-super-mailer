@@ -8,34 +8,185 @@
     { label: "Notifications"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
     { label: notification.title, url: notification.cpEditUrl },
 ] %}
+{% do view.registerAssetBundle('amici\\SuperMailer\\assetbundles\\NotificationEditAsset') %}
 
 {% block content %}
-    <h2>{{ "Subject"|t('super-mailer') }}</h2>
-    <p><code>{{ preview.subject }}</code></p>
+    <div class="super-mailer-preview-detail">
+        <section class="super-mailer-log-hero is-preview">
+            <div>
+                <div class="super-mailer-log-eyebrow">{{ "Notification Preview"|t('super-mailer') }}</div>
+                <h2>{{ notification.title }}</h2>
+                <div class="super-mailer-log-subtitle">
+                    <span>{{ notification.eventClass }}::{{ notification.eventName }}</span>
+                    {% if preview.rawContext.element.id ?? false %}
+                        <span>{{ preview.rawContext.element.type }} #{{ preview.rawContext.element.id }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="super-mailer-log-status-pill">
+                {% if preview.conditions.passed %}
+                    <span class="status enabled"></span>{{ "Conditions pass"|t('super-mailer') }}
+                {% else %}
+                    <span class="status disabled"></span>{{ "Conditions fail"|t('super-mailer') }}
+                {% endif %}
+            </div>
+        </section>
 
-    {% if preview.html %}
-        <h2>{{ "HTML Body"|t('super-mailer') }}</h2>
-        <iframe title="{{ 'HTML preview'|t('super-mailer') }}" srcdoc="{{ preview.html|e('html_attr') }}" style="width:100%;min-height:420px;border:1px solid var(--hairline-color);border-radius:4px;background:#fff;"></iframe>
-    {% elseif preview.errors.html is defined %}
-        <h2>{{ "HTML Body"|t('super-mailer') }}</h2>
-        <div class="pane error">
-            <p><strong>{{ "HTML template failed to render:"|t('super-mailer') }}</strong></p>
-            <pre style="white-space:pre-wrap;">{{ preview.errors.html }}</pre>
+        <div class="super-mailer-log-grid">
+            <section class="super-mailer-log-card">
+                <h2>{{ "Message"|t('super-mailer') }}</h2>
+                <dl class="super-mailer-log-definition-list">
+                    <div>
+                        <dt>{{ "Subject"|t('super-mailer') }}</dt>
+                        <dd><code>{{ preview.subject }}</code></dd>
+                    </div>
+                    <div>
+                        <dt>{{ "HTML Template"|t('super-mailer') }}</dt>
+                        <dd>{{ notification.htmlTemplatePath ?: "None"|t('super-mailer') }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ "Text Template"|t('super-mailer') }}</dt>
+                        <dd>{{ notification.plainTextTemplatePath ?: "None"|t('super-mailer') }}</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="super-mailer-log-card">
+                <h2>{{ "Recipients"|t('super-mailer') }}</h2>
+                <dl class="super-mailer-log-definition-list">
+                    <div>
+                        <dt>{{ "To"|t('super-mailer') }}</dt>
+                        <dd>{{ preview.recipients.to ? preview.recipients.to|join(', ') : "None"|t('super-mailer') }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ "CC"|t('super-mailer') }}</dt>
+                        <dd>{{ preview.recipients.cc ? preview.recipients.cc|join(', ') : "None"|t('super-mailer') }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ "BCC"|t('super-mailer') }}</dt>
+                        <dd>{{ preview.recipients.bcc ? preview.recipients.bcc|join(', ') : "None"|t('super-mailer') }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ "From"|t('super-mailer') }}</dt>
+                        <dd><code>{{ preview.recipients.from|json_encode }}</code></dd>
+                    </div>
+                    <div>
+                        <dt>{{ "Reply To"|t('super-mailer') }}</dt>
+                        <dd>{{ preview.recipients.replyTo ?: "None"|t('super-mailer') }}</dd>
+                    </div>
+                </dl>
+            </section>
         </div>
-    {% endif %}
 
-    <h2>{{ "Plain Text Body"|t('super-mailer') }}</h2>
-    {% if preview.errors.text is defined %}
-        <div class="pane error">
-            <p><strong>{{ "Plain text template failed to render:"|t('super-mailer') }}</strong></p>
-            <pre style="white-space:pre-wrap;">{{ preview.errors.text }}</pre>
+        <section class="super-mailer-log-card">
+            <div class="super-mailer-log-section-heading">
+                <h2>{{ "Test Send"|t('super-mailer') }}</h2>
+                <span>{{ "Uses this preview context"|t('super-mailer') }}</span>
+            </div>
+            <form method="post" accept-charset="UTF-8">
+                {{ actionInput('super-mailer/notification/test-send') }}
+                {{ redirectInput("super-mailer/notifications/#{notification.id}/preview") }}
+                {{ csrfInput() }}
+                {{ hiddenInput('notificationId', notification.id) }}
+                {% set previewElementId = preview.rawContext.previewElementId ?? craft.app.request.getQueryParam('id') %}
+                {% if previewElementId %}
+                    {{ hiddenInput('elementId', previewElementId) }}
+                {% endif %}
+                <div class="super-mailer-preview-test-send">
+                    <div class="textwrapper">
+                        <input type="email" name="testEmail" class="text fullwidth" placeholder="{{ 'you@example.com'|t('super-mailer') }}" required>
+                    </div>
+                    <button type="submit" class="btn submit">{{ "Send test"|t('super-mailer') }}</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="super-mailer-log-card">
+            <div class="super-mailer-log-section-heading">
+                <h2>{{ "Condition Debug"|t('super-mailer') }}</h2>
+                <span>{{ preview.conditions.matchMode == 'any' ? "Any rule can pass"|t('super-mailer') : "All rules must pass"|t('super-mailer') }}</span>
+            </div>
+            <table class="data fullwidth">
+                <thead>
+                    <tr>
+                        <th>{{ "Condition"|t('super-mailer') }}</th>
+                        <th>{{ "Expected"|t('super-mailer') }}</th>
+                        <th>{{ "Actual"|t('super-mailer') }}</th>
+                        <th>{{ "Result"|t('super-mailer') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in preview.conditions.rules %}
+                        <tr>
+                            <td><code>{{ rule.field }}</code></td>
+                            <td><code>{{ rule.expected|join(', ') }}</code></td>
+                            <td><code>{{ rule.actual|json_encode }}</code></td>
+                            <td>
+                                {% if rule.passed %}
+                                    <span class="status enabled"></span>{{ "Passed"|t('super-mailer') }}
+                                {% else %}
+                                    <span class="status disabled"></span>{{ "Failed"|t('super-mailer') }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="4"><span class="light">{{ "No condition rows configured."|t('super-mailer') }}</span></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if preview.conditions.phpConditionNote %}
+                <p class="notice">{{ preview.conditions.phpConditionNote }}</p>
+            {% endif %}
+        </section>
+
+        <section class="super-mailer-log-card">
+            <div class="super-mailer-log-section-heading">
+                <h2>{{ "Rendered Message"|t('super-mailer') }}</h2>
+                <span>{{ "Preview output"|t('super-mailer') }}</span>
+            </div>
+            <div class="super-mailer-log-rendered-subject">
+                <span>{{ "Subject"|t('super-mailer') }}</span>
+                <code>{{ preview.subject }}</code>
+            </div>
+
+            {% if preview.html %}
+                <h3>{{ "HTML Body"|t('super-mailer') }}</h3>
+                <iframe class="super-mailer-log-html-preview" title="{{ 'HTML preview'|t('super-mailer') }}" srcdoc="{{ preview.html|e('html_attr') }}"></iframe>
+            {% elseif preview.errors.html is defined %}
+                <div class="super-mailer-log-error">
+                    <h3>{{ "HTML template failed to render:"|t('super-mailer') }}</h3>
+                    <pre>{{ preview.errors.html }}</pre>
+                </div>
+            {% endif %}
+
+            <h3>{{ "Plain Text Body"|t('super-mailer') }}</h3>
+            {% if preview.errors.text is defined %}
+                <div class="super-mailer-log-error">
+                    <h3>{{ "Plain text template failed to render:"|t('super-mailer') }}</h3>
+                    <pre>{{ preview.errors.text }}</pre>
+                </div>
+            {% endif %}
+            <pre class="super-mailer-log-code-block">{{ preview.text }}</pre>
+        </section>
+
+        <div class="super-mailer-log-grid">
+            <section class="super-mailer-log-card">
+                <div class="super-mailer-log-section-heading">
+                    <h2>{{ "Template Variables"|t('super-mailer') }}</h2>
+                    <span>{{ "Twig-facing"|t('super-mailer') }}</span>
+                </div>
+                <pre class="super-mailer-log-code-block">{{ preview.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+            </section>
+
+            <section class="super-mailer-log-card">
+                <div class="super-mailer-log-section-heading">
+                    <h2>{{ "Raw Event Context"|t('super-mailer') }}</h2>
+                    <span>{{ "Queue payload"|t('super-mailer') }}</span>
+                </div>
+                <pre class="super-mailer-log-code-block">{{ preview.rawContext|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+            </section>
         </div>
-    {% endif %}
-    <pre style="white-space:pre-wrap;">{{ preview.text }}</pre>
-
-    <h2>{{ "Template Variables"|t('super-mailer') }}</h2>
-    <pre style="white-space:pre-wrap;">{{ preview.context|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
-
-    <h2>{{ "Raw Event Context"|t('super-mailer') }}</h2>
-    <pre style="white-space:pre-wrap;">{{ preview.rawContext|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+    </div>
 {% endblock %}

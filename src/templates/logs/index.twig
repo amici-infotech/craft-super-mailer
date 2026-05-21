@@ -55,7 +55,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <strong>{{ log.subject ?: "No subject"|t('super-mailer') }}</strong>
+                            <strong><a href="{{ cpUrl("super-mailer/logs/#{log.id}") }}">{{ log.subject ?: "No subject"|t('super-mailer') }}</a></strong>
                             {% if log.status == 'failed' and log.error %}
                                 <pre class="error smalltext" style="margin-top:4px;white-space:pre-wrap;">{{ log.error }}</pre>
                             {% endif %}

@@ -16,6 +16,16 @@ class MailerService extends Component
 {
     public function sendNotification(MailerNotification $notification, array $eventContext): bool
     {
+        return $this->deliverNotification($notification, $eventContext);
+    }
+
+    public function sendTestNotification(MailerNotification $notification, array $eventContext, string $email): bool
+    {
+        return $this->deliverNotification($notification, $eventContext, [$email]);
+    }
+
+    private function deliverNotification(MailerNotification $notification, array $eventContext, ?array $overrideTo = null): bool
+    {
         $messageData = [];
 
         try {
@@ -29,9 +39,13 @@ class MailerService extends Component
             }
 
             $message = Craft::$app->getMailer()->compose();
-            $to = $this->renderEmailList((string)$notification->toEmails, $variables);
+            $to = $overrideTo ?? $this->renderEmailList((string)$notification->toEmails, $variables);
             $cc = $this->renderEmailList((string)$notification->ccEmails, $variables);
             $bcc = $this->renderEmailList((string)$notification->bccEmails, $variables);
+            if ($overrideTo !== null) {
+                $cc = [];
+                $bcc = [];
+            }
             $from = $this->fromAddress($notification);
             $replyTo = trim((string)$notification->replyTo);
             $messageData = [
@@ -87,6 +101,15 @@ class MailerService extends Component
     public function preview(MailerNotification $notification, ?int $elementId = null): array
     {
         $context = Plugin::getInstance()->getNotifications()->previewEventContext($notification, $elementId);
+        $preview = $this->renderPreviewFromContext($notification, $context);
+        $preview['rawContext'] = $context;
+        $preview['conditions'] = Plugin::getInstance()->getNotifications()->conditionDebug($notification, $context);
+
+        return $preview;
+    }
+
+    public function renderPreviewFromContext(MailerNotification $notification, array $context): array
+    {
         $variables = $this->variables($notification, $context);
         $htmlError = null;
         $textError = null;
@@ -95,6 +118,13 @@ class MailerService extends Component
 
         return [
             'subject' => $this->renderString((string)$notification->emailSubject, $variables),
+            'recipients' => [
+                'to' => $this->renderEmailList((string)$notification->toEmails, $variables),
+                'cc' => $this->renderEmailList((string)$notification->ccEmails, $variables),
+                'bcc' => $this->renderEmailList((string)$notification->bccEmails, $variables),
+                'replyTo' => trim((string)$notification->replyTo),
+                'from' => $this->fromAddress($notification),
+            ],
             'html' => $html,
             'text' => $text ?? $this->fallbackBody($notification, $context),
             'errors' => array_filter([
@@ -102,7 +132,6 @@ class MailerService extends Component
                 'text' => $textError,
             ]),
             'context' => $variables['event']->previewVariables(),
-            'rawContext' => $context,
         ];
     }
 

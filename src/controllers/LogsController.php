@@ -1,12 +1,14 @@
 <?php
 namespace amici\SuperMailer\controllers;
 
+use amici\SuperMailer\elements\MailerNotification;
 use amici\SuperMailer\records\EmailLogRecord;
 use amici\SuperMailer\Plugin;
 use Craft;
 use craft\db\Query;
 use craft\helpers\Json;
 use craft\web\Controller;
+use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
 class LogsController extends Controller
@@ -32,6 +34,35 @@ class LogsController extends Controller
 
         return $this->renderTemplate('super-mailer/logs/index', [
             'logs' => $logs,
+        ]);
+    }
+
+    public function actionView(int $logId): Response
+    {
+        $this->requirePermission('super-mailer:view-notifications');
+
+        $log = EmailLogRecord::findOne($logId);
+        if (!$log instanceof EmailLogRecord) {
+            throw new NotFoundHttpException('Email log not found');
+        }
+
+        $eventContext = $this->decodeValue($log->eventContext);
+        $notification = $log->notificationId
+            ? MailerNotification::find()->id((int)$log->notificationId)->status(null)->one()
+            : null;
+        $renderedPreview = $notification instanceof MailerNotification && is_array($eventContext)
+            ? Plugin::getInstance()->getMailer()->renderPreviewFromContext($notification, $eventContext)
+            : null;
+
+        return $this->renderTemplate('super-mailer/logs/view', [
+            'log' => $log,
+            'toEmailsList' => $this->decodeList($log->toEmails),
+            'ccEmailsList' => $this->decodeList($log->ccEmails),
+            'bccEmailsList' => $this->decodeList($log->bccEmails),
+            'fromEmail' => $this->decodeValue($log->fromEmail),
+            'replyTo' => $this->decodeValue($log->replyTo),
+            'eventContext' => $eventContext,
+            'renderedPreview' => $renderedPreview,
         ]);
     }
 
@@ -94,6 +125,19 @@ class LogsController extends Controller
             return is_array($decoded) ? $decoded : [];
         } catch (\Throwable) {
             return [];
+        }
+    }
+
+    private function decodeValue(?string $value): mixed
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return Json::decode($value);
+        } catch (\Throwable) {
+            return $value;
         }
     }
 

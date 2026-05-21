@@ -3,8 +3,11 @@ namespace amici\SuperMailer\controllers;
 
 use amici\SuperMailer\elements\MailerNotification;
 use amici\SuperMailer\Plugin;
+use amici\SuperMailer\records\EmailLogRecord;
 use Craft;
 use craft\base\Element;
+use craft\db\Query;
+use craft\helpers\Json;
 use craft\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -54,6 +57,7 @@ class NotificationController extends Controller
             'eventValue' => $eventValue,
             'conditionFieldOptions' => $this->conditionFieldOptions(),
             'conditionSuggestions' => $this->conditionSuggestions(),
+            'recentLogs' => $notification->id ? $this->recentLogs((int)$notification->id) : [],
         ]);
     }
 
@@ -166,6 +170,43 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function actionTestSend(): ?Response
+    {
+        $this->requirePostRequest();
+        $this->requirePermission('super-mailer:manage-notifications');
+
+        $notificationId = (int)Craft::$app->getRequest()->getRequiredBodyParam('notificationId');
+        $notification = MailerNotification::find()
+            ->id($notificationId)
+            ->status(null)
+            ->one();
+
+        if (!$notification instanceof MailerNotification) {
+            throw new NotFoundHttpException('Notification not found');
+        }
+
+        $email = trim((string)Craft::$app->getRequest()->getRequiredBodyParam('testEmail'));
+        $validator = new \yii\validators\EmailValidator();
+        if (!$validator->validate($email)) {
+            Craft::$app->getSession()->setError(Craft::t('super-mailer', 'Enter a valid test email address.'));
+            return $this->redirectToPostedUrl();
+        }
+
+        $elementId = Craft::$app->getRequest()->getBodyParam('elementId');
+        $elementId = $elementId !== null && $elementId !== '' ? (int)$elementId : null;
+        $context = Plugin::getInstance()->getNotifications()->previewEventContext($notification, $elementId);
+
+        if (Plugin::getInstance()->getMailer()->sendTestNotification($notification, $context, $email)) {
+            Craft::$app->getSession()->setNotice(Craft::t('super-mailer', 'Test email sent to {email}.', [
+                'email' => $email,
+            ]));
+        } else {
+            Craft::$app->getSession()->setError(Craft::t('super-mailer', 'Could not send test email. Check the email logs for details.'));
+        }
+
+        return $this->redirectToPostedUrl();
+    }
+
     private function conditionFieldOptions(): array
     {
         $options = [
@@ -218,5 +259,36 @@ class NotificationController extends Controller
             'entry.section.handle' => $sections,
             'entry.type.handle' => $entryTypes,
         ];
+    }
+
+    private function recentLogs(int $notificationId): array
+    {
+        $logs = (new Query())
+            ->from(EmailLogRecord::tableName())
+            ->where(['notificationId' => $notificationId])
+            ->orderBy(['dateCreated' => SORT_DESC, 'id' => SORT_DESC])
+            ->limit(10)
+            ->all();
+
+        foreach ($logs as &$log) {
+            $log['toEmailsList'] = $this->decodeList($log['toEmails'] ?? null);
+        }
+        unset($log);
+
+        return $logs;
+    }
+
+    private function decodeList(?string $value): array
+    {
+        if (!$value) {
+            return [];
+        }
+
+        try {
+            $decoded = Json::decode($value);
+            return is_array($decoded) ? $decoded : [];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 }

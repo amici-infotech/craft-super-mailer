@@ -409,7 +409,236 @@
     flex-wrap: wrap;
 }
 
+.super-mailer-log-detail {
+    display: grid;
+    gap: 18px;
+}
+
+.super-mailer-preview-detail {
+    display: grid;
+    gap: 18px;
+}
+
+.super-mailer-log-hero,
+.super-mailer-log-card {
+    border: 1px solid var(--hairline-color);
+    border-radius: 8px;
+    background: var(--body-bg-color);
+    box-shadow: 0 8px 22px rgb(31 41 51 / 8%);
+}
+
+.super-mailer-log-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 24px;
+    border-left-width: 5px;
+}
+
+.super-mailer-log-hero.is-success {
+    border-left-color: var(--enabled-color);
+}
+
+.super-mailer-log-hero.is-failed {
+    border-left-color: var(--error-color);
+}
+
+.super-mailer-log-hero.is-preview {
+    border-left-color: #095985;
+}
+
+.super-mailer-log-eyebrow {
+    margin-bottom: 6px;
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.super-mailer-log-hero h2 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.25;
+}
+
+.super-mailer-log-subtitle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    color: var(--gray-600);
+    font-size: 12px;
+}
+
+.super-mailer-log-subtitle span {
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: var(--gray-100);
+    font-family: var(--font-monospace);
+}
+
+.super-mailer-log-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 999px;
+    background: var(--gray-050);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.super-mailer-log-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.super-mailer-log-card {
+    padding: 20px 22px;
+}
+
+.super-mailer-log-card h2 {
+    margin: 0 0 16px;
+}
+
+.super-mailer-log-card h3 {
+    margin: 22px 0 10px;
+}
+
+.super-mailer-log-definition-list {
+    margin: 0;
+}
+
+.super-mailer-log-definition-list > div {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 14px;
+    padding: 11px 0;
+    border-top: 1px solid var(--hairline-color);
+}
+
+.super-mailer-log-definition-list > div:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.super-mailer-log-definition-list dt {
+    color: var(--gray-600);
+    font-weight: 700;
+}
+
+.super-mailer-log-definition-list dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.super-mailer-log-error {
+    border-color: var(--error-color);
+    background: var(--red-050);
+}
+
+.super-mailer-log-error pre,
+.super-mailer-log-code-block {
+    overflow: auto;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+    background: var(--gray-050);
+    white-space: pre-wrap;
+}
+
+.super-mailer-log-error pre {
+    border-color: rgb(220 38 38 / 20%);
+    background: #fff;
+}
+
+.super-mailer-log-section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.super-mailer-log-section-heading h2 {
+    margin: 0;
+}
+
+.super-mailer-log-section-heading span {
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.super-mailer-log-rendered-subject {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+    background: var(--gray-050);
+}
+
+.super-mailer-log-rendered-subject span {
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.super-mailer-log-html-preview {
+    width: 100%;
+    min-height: 420px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+    background: #fff;
+}
+
+.super-mailer-preview-test-send {
+    display: flex;
+    gap: 10px;
+}
+
+.super-mailer-preview-test-send .textwrapper {
+    flex: 1;
+}
+
 @media (max-width: 720px) {
+    .super-mailer-log-hero,
+    .super-mailer-log-grid {
+        display: block;
+    }
+
+    .super-mailer-log-status-pill,
+    .super-mailer-log-card {
+        margin-top: 14px;
+    }
+
+    .super-mailer-log-definition-list > div {
+        display: block;
+    }
+
+    .super-mailer-log-definition-list dd {
+        margin-top: 4px;
+    }
+
+    .super-mailer-preview-test-send {
+        display: block;
+    }
+
+    .super-mailer-preview-test-send .btn {
+        margin-top: 10px;
+    }
+
     .super-mailer-condition-header {
         display: none;
     }

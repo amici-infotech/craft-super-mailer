@@ -1,0 +1,132 @@
+{% extends "_layouts/cp" %}
+
+{% set title = "Email Log #{id}"|t('super-mailer', { id: log.id }) %}
+{% set selectedNavItem = 'super-mailer' %}
+{% set selectedSubnavItem = 'logs' %}
+{% set crumbs = [
+    { label: "Super Mailer"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
+    { label: "Logs"|t('super-mailer'), url: cpUrl('super-mailer/logs') },
+] %}
+{% do view.registerAssetBundle('amici\\SuperMailer\\assetbundles\\NotificationEditAsset') %}
+
+{% block actionButton %}
+    <form method="post" accept-charset="UTF-8" onsubmit="return confirm('{{ 'Queue this email for resend?'|t('super-mailer')|e('js') }}');">
+        {{ actionInput('super-mailer/logs/resend') }}
+        {{ redirectInput("super-mailer/logs/#{log.id}") }}
+        {{ csrfInput() }}
+        {{ hiddenInput('singleLogId', log.id) }}
+        <button type="submit" class="btn submit">{{ "Resend"|t('super-mailer') }}</button>
+    </form>
+{% endblock %}
+
+{% block content %}
+    <div class="super-mailer-log-detail">
+        <section class="super-mailer-log-hero {{ log.status == 'success' ? 'is-success' : 'is-failed' }}">
+            <div>
+                <div class="super-mailer-log-eyebrow">{{ "Email Log"|t('super-mailer') }} #{{ log.id }}</div>
+                <h2>{{ log.subject ?: "No subject"|t('super-mailer') }}</h2>
+                <div class="super-mailer-log-subtitle">
+                    <span>{{ log.eventClass }}::{{ log.eventName }}</span>
+                    {% if log.elementType and log.elementId %}
+                        <span>{{ log.elementType }} #{{ log.elementId }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="super-mailer-log-status-pill">
+                {% if log.status == 'success' %}
+                    <span class="status enabled"></span>{{ "Success"|t('super-mailer') }}
+                {% else %}
+                    <span class="status disabled"></span>{{ "Failed"|t('super-mailer') }}
+                {% endif %}
+            </div>
+        </section>
+
+        <div class="super-mailer-log-grid">
+            <section class="super-mailer-log-card">
+                <h2>{{ "Message"|t('super-mailer') }}</h2>
+                <dl class="super-mailer-log-definition-list">
+                    <div>
+                        <dt>{{ "Subject"|t('super-mailer') }}</dt>
+                        <dd>{{ log.subject ?: "No subject"|t('super-mailer') }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ "Notification"|t('super-mailer') }}</dt>
+                        <dd>
+                            {% if log.notificationId %}
+                                <a href="{{ cpUrl("super-mailer/notifications/#{log.notificationId}") }}">{{ log.notificationTitle ?: "Notification"|t('super-mailer') }}</a>
+                            {% else %}
+                                {{ log.notificationTitle ?: "Deleted notification"|t('super-mailer') }}
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>{{ "Date"|t('app') }}</dt>
+                        <dd>{{ log.dateCreated|datetime('short') }}</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="super-mailer-log-card">
+                <h2>{{ "Recipients"|t('super-mailer') }}</h2>
+                <dl class="super-mailer-log-definition-list">
+                    <div>
+                        <dt>{{ "To"|t('super-mailer') }}</dt>
+                        <dd>{{ toEmailsList ? toEmailsList|join(', ') : "None"|t('super-mailer') }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ "CC"|t('super-mailer') }}</dt>
+                        <dd>{{ ccEmailsList ? ccEmailsList|join(', ') : "None"|t('super-mailer') }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ "BCC"|t('super-mailer') }}</dt>
+                        <dd>{{ bccEmailsList ? bccEmailsList|join(', ') : "None"|t('super-mailer') }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ "From"|t('super-mailer') }}</dt>
+                        <dd><code>{{ fromEmail|json_encode }}</code></dd>
+                    </div>
+                    <div>
+                        <dt>{{ "Reply To"|t('super-mailer') }}</dt>
+                        <dd><code>{{ replyTo|json_encode }}</code></dd>
+                    </div>
+                </dl>
+            </section>
+        </div>
+
+        {% if log.error %}
+            <section class="super-mailer-log-card super-mailer-log-error">
+                <h2>{{ "Error"|t('super-mailer') }}</h2>
+                <pre>{{ log.error }}</pre>
+            </section>
+        {% endif %}
+
+        {% if renderedPreview %}
+            <section class="super-mailer-log-card">
+                <div class="super-mailer-log-section-heading">
+                    <h2>{{ "Rendered Message"|t('super-mailer') }}</h2>
+                    <span>{{ "From current notification settings"|t('super-mailer') }}</span>
+                </div>
+                <div class="super-mailer-log-rendered-subject">
+                    <span>{{ "Subject"|t('super-mailer') }}</span>
+                    <code>{{ renderedPreview.subject }}</code>
+                </div>
+
+                {% if renderedPreview.html %}
+                    <h3>{{ "HTML Body"|t('super-mailer') }}</h3>
+                    <iframe class="super-mailer-log-html-preview" title="{{ 'HTML preview'|t('super-mailer') }}" srcdoc="{{ renderedPreview.html|e('html_attr') }}"></iframe>
+                {% endif %}
+
+                <h3>{{ "Plain Text Body"|t('super-mailer') }}</h3>
+                <pre class="super-mailer-log-code-block">{{ renderedPreview.text }}</pre>
+            </section>
+        {% endif %}
+
+        <section class="super-mailer-log-card">
+            <div class="super-mailer-log-section-heading">
+                <h2>{{ "Event Context"|t('super-mailer') }}</h2>
+                <span>{{ "Stored queue payload"|t('super-mailer') }}</span>
+            </div>
+            <pre class="super-mailer-log-code-block">{{ eventContext|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+        </section>
+    </div>
+{% endblock %}

@@ -122,6 +122,47 @@ class NotificationService extends Component
         return $context;
     }
 
+    public function conditionDebug(MailerNotification $notification, array $context): array
+    {
+        $rules = [];
+        foreach ($notification->normalizedConditionRules() as $rule) {
+            $field = (string)($rule['field'] ?? '');
+            $actual = $this->conditionValue($field, $context);
+            $expectedValues = $this->conditionExpectedValues((string)($rule['value'] ?? ''));
+
+            if ($field === 'element.status') {
+                $actual = $this->normalizeStatusConditionValue($actual);
+                $expectedValues = array_values(array_filter(
+                    array_map(fn(string $value): ?string => $this->normalizeStatusConditionValue($value), $expectedValues)
+                ));
+            }
+
+            $rules[] = [
+                'field' => $field,
+                'operator' => (string)($rule['operator'] ?? 'equals'),
+                'expected' => $expectedValues,
+                'actual' => $actual,
+                'passed' => $this->conditionRulePasses($rule, $context),
+            ];
+        }
+
+        $phpCondition = trim((string)$notification->phpCondition);
+
+        return [
+            'matchMode' => $notification->conditionMatchMode,
+            'rules' => $rules,
+            'phpCondition' => $phpCondition,
+            'phpConditionNote' => $phpCondition !== ''
+                ? Craft::t('super-mailer', 'PHP conditions are evaluated against the live event object when the event fires.')
+                : null,
+            'passed' => $rules
+                ? ($notification->conditionMatchMode === 'any'
+                    ? in_array(true, array_column($rules, 'passed'), true)
+                    : !in_array(false, array_column($rules, 'passed'), true))
+                : true,
+        ];
+    }
+
     private function shouldIgnoreEvent(Event $event): bool
     {
         $element = $this->eventElement($event);
