@@ -24,6 +24,11 @@ class SettingsController extends Controller
         $this->requirePostRequest();
         $this->requirePermission('super-mailer:manage-notifications');
 
+        if (!Craft::$app->getConfig()->getGeneral()->allowAdminChanges) {
+            Craft::$app->getSession()->setError(Craft::t('app', 'Changes to these settings aren’t permitted in this environment.'));
+            return $this->redirectToPostedUrl();
+        }
+
         $settings = Plugin::getInstance()->getSettings();
         $settings->pluginName = Craft::$app->getRequest()->getBodyParam('pluginName', $settings->pluginName);
         $settings->emailLogRetentionDays = (int)Craft::$app->getRequest()->getBodyParam('emailLogRetentionDays', $settings->emailLogRetentionDays);
