@@ -12,18 +12,44 @@ use craft\helpers\App;
 use Throwable;
 use yii\base\Component;
 
+/**
+ * Renders notification templates, sends emails through Craft mailer, previews output, and records delivery logs.
+ */
 class MailerService extends Component
 {
+    /**
+     * Sends a notification using the normal recipient configuration and event context.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param array $eventContext eventContext value used by this method.
+     * @return bool Return value produced by this method.
+     */
     public function sendNotification(MailerNotification $notification, array $eventContext): bool
     {
         return $this->deliverNotification($notification, $eventContext);
     }
 
+    /**
+     * Sends a preview/test notification to a single override recipient.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param array $eventContext eventContext value used by this method.
+     * @param string $email email value used by this method.
+     * @return bool Return value produced by this method.
+     */
     public function sendTestNotification(MailerNotification $notification, array $eventContext, string $email): bool
     {
         return $this->deliverNotification($notification, $eventContext, [$email]);
     }
 
+    /**
+     * Renders, addresses, sends, and logs one notification delivery attempt.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param array $eventContext eventContext value used by this method.
+     * @param array $overrideTo overrideTo value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function deliverNotification(MailerNotification $notification, array $eventContext, ?array $overrideTo = null): bool
     {
         $messageData = [];
@@ -98,6 +124,13 @@ class MailerService extends Component
         }
     }
 
+    /**
+     * Builds a full preview payload for a notification, including recipients, body output, conditions, and context.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param int $elementId elementId value used by this method.
+     * @return array Return value produced by this method.
+     */
     public function preview(MailerNotification $notification, ?int $elementId = null): array
     {
         $context = Plugin::getInstance()->getNotifications()->previewEventContext($notification, $elementId);
@@ -108,6 +141,13 @@ class MailerService extends Component
         return $preview;
     }
 
+    /**
+     * Renders preview output from an existing serialized context, such as a log payload.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param array $context context value used by this method.
+     * @return array Return value produced by this method.
+     */
     public function renderPreviewFromContext(MailerNotification $notification, array $context): array
     {
         $variables = $this->variables($notification, $context);
@@ -135,6 +175,12 @@ class MailerService extends Component
         ];
     }
 
+    /**
+     * Parses a comma-separated email list into unique trimmed addresses.
+     *
+     * @param string $value value value used by this method.
+     * @return array Return value produced by this method.
+     */
     public function parseEmailList(string $value): array
     {
         $parts = explode(',', $value);
@@ -150,11 +196,26 @@ class MailerService extends Component
         return array_values(array_unique($emails));
     }
 
+    /**
+     * Renders Twig in an email list field and parses the result into addresses.
+     *
+     * @param string $value value value used by this method.
+     * @param array $variables variables value used by this method.
+     * @return array Return value produced by this method.
+     */
     public function renderEmailList(string $value, array $variables): array
     {
         return $this->parseEmailList($this->renderString($value, $variables));
     }
 
+    /**
+     * Renders an HTML or text email template from the site templates folder.
+     *
+     * @param string $templatePath templatePath value used by this method.
+     * @param array $variables variables value used by this method.
+     * @param string & $error error value used by this method.
+     * @return ?string Return value produced by this method.
+     */
     public function renderBody(?string $templatePath, array $variables, ?string &$error = null): ?string
     {
         $error = null;
@@ -178,6 +239,13 @@ class MailerService extends Component
         }
     }
 
+    /**
+     * Renders inline Twig strings such as subjects and recipient fields.
+     *
+     * @param string $template template value used by this method.
+     * @param array $variables variables value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function renderString(string $template, array $variables): string
     {
         if ($template === '') {
@@ -191,6 +259,13 @@ class MailerService extends Component
         }
     }
 
+    /**
+     * Builds the Twig variable set used for previews and sends.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param array $eventContext eventContext value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function variables(MailerNotification $notification, array $eventContext): array
     {
         $renderEvent = $this->renderEventContext($eventContext);
@@ -204,6 +279,12 @@ class MailerService extends Component
         ];
     }
 
+    /**
+     * Wraps serialized event context in the template-facing EventContext object.
+     *
+     * @param array $eventContext eventContext value used by this method.
+     * @return EventContext Return value produced by this method.
+     */
     private function renderEventContext(array $eventContext): EventContext
     {
         $element = $this->contextElement($eventContext['element'] ?? null);
@@ -211,6 +292,12 @@ class MailerService extends Component
         return new EventContext($eventContext, $element);
     }
 
+    /**
+     * Rehydrates the element referenced by serialized event context when possible.
+     *
+     * @param mixed $elementData elementData value used by this method.
+     * @return ?Element Return value produced by this method.
+     */
     private function contextElement(mixed $elementData): ?Element
     {
         if (!is_array($elementData)) {
@@ -248,6 +335,12 @@ class MailerService extends Component
         }
     }
 
+    /**
+     * Resolves the configured or default sender address for a notification.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @return string|array Return value produced by this method.
+     */
     private function fromAddress(MailerNotification $notification): string|array
     {
         $settings = App::mailSettings();
@@ -260,6 +353,12 @@ class MailerService extends Component
         return $name !== '' ? [$email => $name] : $email;
     }
 
+    /**
+     * Extracts a useful mailer error message from the message or Craft logger.
+     *
+     * @param mixed $message message value used by this method.
+     * @return ?string Return value produced by this method.
+     */
     private function messageError(mixed $message): ?string
     {
         try {
@@ -274,11 +373,22 @@ class MailerService extends Component
         return $recentMailerError ?: null;
     }
 
+    /**
+     * Formats an exception message and stack trace for storage in email logs.
+     *
+     * @param Throwable $e e value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function exceptionLog(Throwable $e): string
     {
         return $e->getMessage() . "\n\n" . $e::class . "\n" . $e->getTraceAsString();
     }
 
+    /**
+     * Finds the latest Craft mailer warning that explains a send failure.
+     *
+     * @return ?string Return value produced by this method.
+     */
     private function recentMailerError(): ?string
     {
         $messages = Craft::getLogger()->messages;
@@ -297,6 +407,18 @@ class MailerService extends Component
         return null;
     }
 
+    /**
+     * Writes the delivery attempt to the email log table and applies the configured retention policy.
+     *
+     * This is kept close to message delivery so every success or failure follows the same logging path,
+     * including preview test sends and queued resend attempts.
+     *
+     * @param MailerNotification $notification Notification definition being delivered.
+     * @param array $eventContext Serialized event context used for rendering.
+     * @param string $status Delivery status stored on the log row.
+     * @param string|null $error Failure detail, including stack traces when available.
+     * @param array $messageData Rendered message metadata captured for log detail pages.
+     */
     private function recordEmailLog(
         MailerNotification $notification,
         array $eventContext,
@@ -308,6 +430,13 @@ class MailerService extends Component
         Plugin::getInstance()->getLogs()->purgeByRetention();
     }
 
+    /**
+     * Builds a plain text fallback body when no template body renders.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param array $eventContext eventContext value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function fallbackBody(MailerNotification $notification, array $eventContext): string
     {
         $lines = [

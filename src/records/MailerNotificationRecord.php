@@ -25,11 +25,21 @@ use craft\db\ActiveRecord;
  */
 class MailerNotificationRecord extends ActiveRecord
 {
+    /**
+     * Returns the database table name used by this ActiveRecord.
+     *
+     * @return string Return value produced by this method.
+     */
     public static function tableName(): string
     {
         return '{{%super_mailer_notifications}}';
     }
 
+    /**
+     * Defines validation rules for this model or record.
+     *
+     * @return array Return value produced by this method.
+     */
     public function rules(): array
     {
         return [

@@ -3,8 +3,16 @@ namespace amici\SuperMailer\migrations;
 
 use craft\db\Migration;
 
+/**
+ * Migration that adds the email log table to existing Super Mailer installations.
+ */
 class m260520_073500_add_email_logs extends Migration
 {
+    /**
+     * Applies this database migration safely.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function safeUp(): bool
     {
         if (!$this->db->tableExists('{{%super_mailer_email_logs}}')) {
@@ -55,6 +63,11 @@ class m260520_073500_add_email_logs extends Migration
         return true;
     }
 
+    /**
+     * Reverts this database migration safely.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function safeDown(): bool
     {
         $this->dropTableIfExists('{{%super_mailer_email_logs}}');

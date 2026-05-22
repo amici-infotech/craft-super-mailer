@@ -11,10 +11,18 @@ use craft\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
+/**
+ * Controller for email log browsing, detail views, deletion, resending, and console log maintenance, depending on namespace.
+ */
 class LogsController extends Controller
 {
     protected array|bool|int $allowAnonymous = false;
 
+    /**
+     * Renders the default listing screen for this controller.
+     *
+     * @return Response Return value produced by this method.
+     */
     public function actionIndex(): Response
     {
         $this->requirePermission('super-mailer:view-notifications');
@@ -37,6 +45,12 @@ class LogsController extends Controller
         ]);
     }
 
+    /**
+     * Renders a detailed email log page with decoded context and rendered output.
+     *
+     * @param int $logId logId value used by this method.
+     * @return Response Return value produced by this method.
+     */
     public function actionView(int $logId): Response
     {
         $this->requirePermission('super-mailer:view-notifications');
@@ -66,6 +80,11 @@ class LogsController extends Controller
         ]);
     }
 
+    /**
+     * Deletes the requested notification or email log after permission checks.
+     *
+     * @return ?Response Return value produced by this method.
+     */
     public function actionDelete(): ?Response
     {
         $this->requirePostRequest();
@@ -81,6 +100,11 @@ class LogsController extends Controller
         return $this->redirectToPostedUrl();
     }
 
+    /**
+     * Queues selected email logs for resend.
+     *
+     * @return ?Response Return value produced by this method.
+     */
     public function actionResend(): ?Response
     {
         $this->requirePostRequest();
@@ -101,6 +125,11 @@ class LogsController extends Controller
         return $this->redirectToPostedUrl();
     }
 
+    /**
+     * Deletes all email logs from the Control Panel.
+     *
+     * @return ?Response Return value produced by this method.
+     */
     public function actionDeleteAll(): ?Response
     {
         $this->requirePostRequest();
@@ -114,6 +143,12 @@ class LogsController extends Controller
         return $this->redirectToPostedUrl();
     }
 
+    /**
+     * Decodes a JSON-stored email list value into an array for display.
+     *
+     * @param string $value value value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function decodeList(?string $value): array
     {
         if (!$value) {
@@ -128,6 +163,12 @@ class LogsController extends Controller
         }
     }
 
+    /**
+     * Decodes a JSON-stored log value, falling back to the raw value when needed.
+     *
+     * @param string $value value value used by this method.
+     * @return mixed Return value produced by this method.
+     */
     private function decodeValue(?string $value): mixed
     {
         if (!$value) {
@@ -141,6 +182,11 @@ class LogsController extends Controller
         }
     }
 
+    /**
+     * Combines bulk and single log ID POST values into one ID list.
+     *
+     * @return array Return value produced by this method.
+     */
     private function requestedLogIds(): array
     {
         $ids = Craft::$app->getRequest()->getBodyParam('logIds', []);

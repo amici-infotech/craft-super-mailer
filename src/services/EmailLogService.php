@@ -11,8 +11,23 @@ use DateTimeImmutable;
 use Throwable;
 use yii\base\Component;
 
+/**
+ * Persists, deletes, purges, counts, and queues resends for Super Mailer email log records.
+ */
 class EmailLogService extends Component
 {
+    /**
+     * Stores a delivery attempt with notification metadata, message metadata, and serialized event context.
+     *
+     * The service guards against missing tables so send attempts do not crash during installs, migrations,
+     * or disabled-plugin states where the log table is not yet available.
+     *
+     * @param MailerNotification $notification Notification definition that produced the attempt.
+     * @param array $eventContext Serialized event context used to render and resend the message.
+     * @param string $status Log status such as success or failed.
+     * @param string|null $error Full failure details when delivery failed.
+     * @param array $messageData Rendered recipients, subject, body, and sender details.
+     */
     public function record(
         MailerNotification $notification,
         array $eventContext,
@@ -51,6 +66,12 @@ class EmailLogService extends Component
         }
     }
 
+    /**
+     * Deletes logs older than the configured or supplied retention period.
+     *
+     * @param int $retentionDays retentionDays value used by this method.
+     * @return int Return value produced by this method.
+     */
     public function purgeByRetention(?int $retentionDays = null): int
     {
         if (!$this->tableExists()) {
@@ -70,6 +91,11 @@ class EmailLogService extends Component
             ->execute();
     }
 
+    /**
+     * Deletes every stored email log row.
+     *
+     * @return int Return value produced by this method.
+     */
     public function purgeAll(): int
     {
         if (!$this->tableExists()) {
@@ -81,6 +107,12 @@ class EmailLogService extends Component
             ->execute();
     }
 
+    /**
+     * Deletes selected email logs by ID.
+     *
+     * @param array $ids ids value used by this method.
+     * @return int Return value produced by this method.
+     */
     public function deleteByIds(array $ids): int
     {
         if (!$this->tableExists()) {
@@ -97,6 +129,12 @@ class EmailLogService extends Component
             ->execute();
     }
 
+    /**
+     * Queues resend jobs for selected logs using their stored event contexts.
+     *
+     * @param array $ids ids value used by this method.
+     * @return array Return value produced by this method.
+     */
     public function resendByIds(array $ids): array
     {
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
@@ -152,6 +190,11 @@ class EmailLogService extends Component
         ];
     }
 
+    /**
+     * Counts stored email log rows.
+     *
+     * @return int Return value produced by this method.
+     */
     public function count(): int
     {
         if (!$this->tableExists()) {
@@ -163,6 +206,12 @@ class EmailLogService extends Component
             ->count();
     }
 
+    /**
+     * JSON-encodes log values for storage, returning null when encoding fails.
+     *
+     * @param mixed $value value value used by this method.
+     * @return ?string Return value produced by this method.
+     */
     private function encode(mixed $value): ?string
     {
         try {
@@ -172,6 +221,11 @@ class EmailLogService extends Component
         }
     }
 
+    /**
+     * Checks whether the email log table exists before touching it.
+     *
+     * @return bool Return value produced by this method.
+     */
     private function tableExists(): bool
     {
         try {

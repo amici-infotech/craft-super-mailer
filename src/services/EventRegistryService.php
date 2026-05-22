@@ -10,10 +10,18 @@ use Solspace\Freeform\Events\Submissions\ProcessSubmissionEvent;
 use Throwable;
 use yii\base\Component;
 
+/**
+ * Discovers supported Craft and plugin events and formats them for the notification event picker.
+ */
 class EventRegistryService extends Component
 {
     private ?array $_events = null;
 
+    /**
+     * Builds and caches the complete list of supported events available to notifications.
+     *
+     * @return array Return value produced by this method.
+     */
     public function getEvents(): array
     {
         if ($this->_events !== null) {
@@ -48,6 +56,11 @@ class EventRegistryService extends Component
         return $this->_events = array_values($events);
     }
 
+    /**
+     * Formats supported events for the JavaScript event picker on the notification edit screen.
+     *
+     * @return array Return value produced by this method.
+     */
     public function getSelectOptions(): array
     {
         $options = [];
@@ -67,6 +80,12 @@ class EventRegistryService extends Component
         return $options;
     }
 
+    /**
+     * Decodes a stored event picker value and returns the matching event definition.
+     *
+     * @param string $value value value used by this method.
+     * @return ?array Return value produced by this method.
+     */
     public function getEventByValue(?string $value): ?array
     {
         $decoded = $this->decodeEventValue($value);
@@ -83,6 +102,14 @@ class EventRegistryService extends Component
         return null;
     }
 
+    /**
+     * Encodes event identity data into the opaque value stored by the event picker field.
+     *
+     * @param string $class class value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @param string $constant constant value used by this method.
+     * @return string Return value produced by this method.
+     */
     public function encodeEventValue(string $class, string $eventName, string $constant): string
     {
         return base64_encode(json_encode([
@@ -92,6 +119,12 @@ class EventRegistryService extends Component
         ]));
     }
 
+    /**
+     * Decodes an event picker value back into class, constant, and event name parts.
+     *
+     * @param string $value value value used by this method.
+     * @return ?array Return value produced by this method.
+     */
     public function decodeEventValue(?string $value): ?array
     {
         if (!$value) {
@@ -110,6 +143,13 @@ class EventRegistryService extends Component
         ];
     }
 
+    /**
+     * Checks whether a submitted event class and event name are still available in the registry.
+     *
+     * @param string $class class value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @return bool Return value produced by this method.
+     */
     public function isValidEvent(string $class, string $eventName): bool
     {
         foreach ($this->getEvents() as $event) {
@@ -121,6 +161,11 @@ class EventRegistryService extends Component
         return false;
     }
 
+    /**
+     * Collects raw event definitions from registered content element classes and known supported event classes.
+     *
+     * @return array Return value produced by this method.
+     */
     private function discoverEventDefinitions(): array
     {
         $definitions = [];
@@ -131,47 +176,19 @@ class EventRegistryService extends Component
             }
         }
 
-        foreach (get_declared_classes() as $class) {
-            if (str_starts_with($class, 'craft\\') || str_starts_with($class, 'yii\\')) {
-                foreach ($this->reflectedEventDefinitions($class) as $definition) {
-                    $definitions[$definition['class'] . '::' . $definition['eventName']] = $definition;
-                }
-            }
-        }
-
-        foreach ($this->scanRoots() as $root) {
-            if (!is_dir($root)) {
-                continue;
-            }
-
-            foreach ($this->scanPhpFiles($root) as $file) {
-                $class = $this->classNameFromFile($file);
-                if ($class !== null) {
-                    if (str_starts_with($class, 'craft\\') || str_starts_with($class, 'yii\\')) {
-                        foreach ($this->reflectedEventDefinitions($class) as $definition) {
-                            $definitions[$definition['class'] . '::' . $definition['eventName']] = $definition;
-                        }
-                        continue;
-                    }
-
-                    foreach ($this->eventConstantsFromFile($file) as $constant => $eventDefinition) {
-                        $eventName = $eventDefinition['eventName'];
-                        $definitions[$class . '::' . $eventName] = [
-                            'class' => $class,
-                            'constant' => $constant,
-                            'eventName' => $eventDefinition['eventName'],
-                            'eventType' => $eventDefinition['eventType'],
-                        ];
-                    }
-                }
-            }
-        }
-
         ksort($definitions);
 
         return array_values($definitions);
     }
 
+    /**
+     * Determines whether a discovered event is relevant for content notification workflows.
+     *
+     * @param string $class class value used by this method.
+     * @param string $constant constant value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function isContentManagementEvent(string $class, string $constant, string $eventName): bool
     {
         if ($this->isKnownPluginContentEvent($class, $constant, $eventName)) {
@@ -193,6 +210,14 @@ class EventRegistryService extends Component
         return false;
     }
 
+    /**
+     * Recognizes explicitly supported third-party plugin content events that do not follow Craft lifecycle names.
+     *
+     * @param string $class class value used by this method.
+     * @param string $constant constant value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function isKnownPluginContentEvent(string $class, string $constant, string $eventName): bool
     {
         return class_exists(FreeformSubmission::class)
@@ -201,6 +226,13 @@ class EventRegistryService extends Component
             && $eventName === FreeformSubmission::EVENT_PROCESS_SUBMISSION;
     }
 
+    /**
+     * Checks whether an event constant represents an element lifecycle event Super Mailer should expose.
+     *
+     * @param string $constant constant value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function isElementLifecycleConstant(string $constant, string $eventName): bool
     {
         if (in_array($constant, [
@@ -221,6 +253,11 @@ class EventRegistryService extends Component
         return false;
     }
 
+    /**
+     * Returns Craft element/service classes that should be scanned for notification event constants.
+     *
+     * @return array Return value produced by this method.
+     */
     private function registeredContentEventClasses(): array
     {
         static $classes = null;
@@ -243,9 +280,19 @@ class EventRegistryService extends Component
         } catch (Throwable) {
         }
 
+        if (class_exists(FreeformSubmission::class)) {
+            $classes[] = FreeformSubmission::class;
+        }
+
         return $classes = array_values(array_unique($classes));
     }
 
+    /**
+     * Reflects a class and extracts its public event constants with their event types.
+     *
+     * @param string $class class value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function reflectedEventDefinitions(string $class): array
     {
         try {
@@ -278,123 +325,12 @@ class EventRegistryService extends Component
         }
     }
 
-    private function scanRoots(): array
-    {
-        $roots = [];
-
-        try {
-            $roots[] = Craft::getAlias('@craft');
-        } catch (Throwable) {
-        }
-
-        try {
-            $yiiReflection = new ReflectionClass(\yii\base\Event::class);
-            $roots[] = dirname((string)$yiiReflection->getFileName(), 2);
-        } catch (Throwable) {
-        }
-
-        try {
-            foreach (Craft::$app->getPlugins()->getAllPlugins() as $plugin) {
-                if (method_exists($plugin, 'getBasePath')) {
-                    $roots[] = $plugin->getBasePath();
-                }
-            }
-        } catch (Throwable) {
-        }
-
-        return array_values(array_unique(array_filter($roots)));
-    }
-
-    private function scanPhpFiles(string $root): array
-    {
-        $files = [];
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS)
-        );
-
-        foreach ($iterator as $file) {
-            if (!$file->isFile() || $file->getExtension() !== 'php') {
-                continue;
-            }
-
-            $path = $file->getPathname();
-            $files[] = $path;
-        }
-
-        return $files;
-    }
-
-    private function classNameFromFile(string $file): ?string
-    {
-        $contents = @file_get_contents($file);
-        if ($contents === false) {
-            return null;
-        }
-
-        $namespace = '';
-        $tokens = token_get_all($contents);
-        $count = count($tokens);
-
-        for ($i = 0; $i < $count; $i++) {
-            $token = $tokens[$i];
-            if (is_array($token) && $token[0] === T_NAMESPACE) {
-                $namespace = '';
-                for ($j = $i + 1; $j < $count; $j++) {
-                    $part = $tokens[$j];
-                    if ($part === ';' || $part === '{') {
-                        break;
-                    }
-                    if (is_array($part) && in_array($part[0], [T_STRING, T_NAME_QUALIFIED, T_NS_SEPARATOR], true)) {
-                        $namespace .= $part[1];
-                    }
-                }
-            }
-
-            if (is_array($token) && in_array($token[0], [T_CLASS, T_INTERFACE], true)) {
-                for ($j = $i + 1; $j < $count; $j++) {
-                    $part = $tokens[$j];
-                    if (is_array($part) && $part[0] === T_STRING) {
-                        return ltrim($namespace . '\\' . $part[1], '\\');
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private function eventConstantsFromFile(string $file): array
-    {
-        $contents = @file_get_contents($file);
-        if ($contents === false) {
-            return [];
-        }
-
-        $namespace = $this->namespaceFromContents($contents);
-        $uses = $this->usesFromContents($contents);
-        $class = $this->classNameFromFile($file) ?? '';
-        preg_match_all(
-            '/(?:(\/\*\*.*?\*\/)\s*)?(?:public|protected|private)?\s*const\s+(EVENT_[A-Z0-9_]+)\s*=\s*([\'"])(.*?)\3\s*;/s',
-            $contents,
-            $matches,
-            PREG_SET_ORDER
-        );
-
-        $constants = [];
-        foreach ($matches as $match) {
-            if (($match[2] ?? '') !== '' && ($match[4] ?? '') !== '') {
-                $eventType = $this->eventTypeFromDocblock($match[1] ?? '', $namespace, $uses);
-                $constants[$match[2]] = [
-                    'eventName' => stripcslashes($match[4]),
-                    'eventType' => $this->knownPluginEventType($class, $match[2], stripcslashes($match[4]))
-                        ?? $eventType,
-                ];
-            }
-        }
-
-        return $constants;
-    }
-
+    /**
+     * Reads a PHP namespace declaration from source text when resolving docblock event types.
+     *
+     * @param string $contents contents value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function namespaceFromContents(string $contents): string
     {
         if (preg_match('/^\s*namespace\s+([^;{]+)[;{]/m', $contents, $match)) {
@@ -404,6 +340,12 @@ class EventRegistryService extends Component
         return '';
     }
 
+    /**
+     * Reads PHP use statements from source text so short docblock class names can be resolved.
+     *
+     * @param string $contents contents value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function usesFromContents(string $contents): array
     {
         preg_match_all('/^\s*use\s+([^;]+);/m', $contents, $matches);
@@ -428,6 +370,14 @@ class EventRegistryService extends Component
         return $uses;
     }
 
+    /**
+     * Extracts an @event type from a constant docblock and resolves it to a fully qualified class name.
+     *
+     * @param string $docblock docblock value used by this method.
+     * @param string $namespace namespace value used by this method.
+     * @param array $uses uses value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function eventTypeFromDocblock(string $docblock, string $namespace, array $uses): string
     {
         if (preg_match('/@event\s+([\\\\a-zA-Z0-9_]+)/', $docblock, $match)) {
@@ -437,6 +387,14 @@ class EventRegistryService extends Component
         return \yii\base\Event::class;
     }
 
+    /**
+     * Returns a concrete event class for explicitly supported plugin events when docblocks are not enough.
+     *
+     * @param string $class class value used by this method.
+     * @param string $constant constant value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @return ?string Return value produced by this method.
+     */
     private function knownPluginEventType(string $class, string $constant, string $eventName): ?string
     {
         if (
@@ -452,6 +410,12 @@ class EventRegistryService extends Component
         return null;
     }
 
+    /**
+     * Resolves the event object class associated with a reflected event constant.
+     *
+     * @param \ReflectionClassConstant $constant constant value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function eventTypeFromReflectionConstant(\ReflectionClassConstant $constant): string
     {
         $declaringClass = $constant->getDeclaringClass();
@@ -469,6 +433,14 @@ class EventRegistryService extends Component
         return $this->eventTypeFromDocblock($constant->getDocComment() ?: '', $namespace, $uses);
     }
 
+    /**
+     * Resolves short, imported, or fully qualified class names relative to a namespace and use map.
+     *
+     * @param string $type type value used by this method.
+     * @param string $namespace namespace value used by this method.
+     * @param array $uses uses value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function resolveClassName(string $type, string $namespace, array $uses): string
     {
         $type = trim($type, '\\');
@@ -491,6 +463,12 @@ class EventRegistryService extends Component
         return $namespace !== '' ? $namespace . '\\' . $type : $type;
     }
 
+    /**
+     * Builds the variable list shown for a selected event in the notification editor.
+     *
+     * @param string $eventType eventType value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function eventVariables(string $eventType): array
     {
         $variables = [
@@ -568,6 +546,12 @@ class EventRegistryService extends Component
         return $variables;
     }
 
+    /**
+     * Extracts a human-readable property description from a PHPDoc block.
+     *
+     * @param string $docblock docblock value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function propertyDescription(string $docblock): string
     {
         if (preg_match('/@var\s+[^\s]+\s+(.+)/', $docblock, $match)) {
@@ -577,6 +561,12 @@ class EventRegistryService extends Component
         return '';
     }
 
+    /**
+     * Extracts a human-readable method return description from a PHPDoc block.
+     *
+     * @param string $docblock docblock value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function methodDescription(string $docblock): string
     {
         if (preg_match('/@return\s+[^\s]+\s+(.+)/', $docblock, $match)) {
@@ -586,6 +576,13 @@ class EventRegistryService extends Component
         return '';
     }
 
+    /**
+     * Checks whether a variable entry already exists before adding duplicate event variable metadata.
+     *
+     * @param array $variables variables value used by this method.
+     * @param string $name name value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function hasVariable(array $variables, string $name): bool
     {
         foreach ($variables as $variable) {
@@ -597,6 +594,14 @@ class EventRegistryService extends Component
         return false;
     }
 
+    /**
+     * Generates copyable PHP listener code for the selected event.
+     *
+     * @param string $class class value used by this method.
+     * @param string $constant constant value used by this method.
+     * @param string $eventType eventType value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function exampleCode(string $class, string $constant, string $eventType): string
     {
         $classShort = $this->shortClassName($class);
@@ -617,11 +622,25 @@ class EventRegistryService extends Component
         ]);
     }
 
+    /**
+     * Returns the final class segment for display in generated code.
+     *
+     * @param string $class class value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function shortClassName(string $class): string
     {
         return substr($class, (int)strrpos($class, '\\') + 1);
     }
 
+    /**
+     * Builds the human-readable event label shown in the picker.
+     *
+     * @param string $class class value used by this method.
+     * @param string $constant constant value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function labelFor(string $class, string $constant, string $eventName): string
     {
         return $class . '::' . $constant . ' (' . $eventName . ')';

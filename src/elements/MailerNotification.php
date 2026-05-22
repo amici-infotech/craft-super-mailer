@@ -16,6 +16,9 @@ use craft\helpers\Html;
 use craft\helpers\UrlHelper;
 use Exception;
 
+/**
+ * Custom Craft element representing a configurable event-driven email notification in the Control Panel.
+ */
 class MailerNotification extends Element
 {
     public ?string $handle = null;
@@ -36,76 +39,152 @@ class MailerNotification extends Element
     public ?string $phpCondition = null;
     public bool $enabledNotification = true;
 
+    /**
+     * Handles display name behavior for this Super Mailer component.
+     *
+     * @return string Return value produced by this method.
+     */
     public static function displayName(): string
     {
         return Craft::t('super-mailer', 'Notification');
     }
 
+    /**
+     * Handles lower display name behavior for this Super Mailer component.
+     *
+     * @return string Return value produced by this method.
+     */
     public static function lowerDisplayName(): string
     {
         return Craft::t('super-mailer', 'notification');
     }
 
+    /**
+     * Handles plural display name behavior for this Super Mailer component.
+     *
+     * @return string Return value produced by this method.
+     */
     public static function pluralDisplayName(): string
     {
         return Craft::t('super-mailer', 'Notifications');
     }
 
+    /**
+     * Handles plural lower display name behavior for this Super Mailer component.
+     *
+     * @return string Return value produced by this method.
+     */
     public static function pluralLowerDisplayName(): string
     {
         return Craft::t('super-mailer', 'notifications');
     }
 
+    /**
+     * Handles ref handle behavior for this Super Mailer component.
+     *
+     * @return ?string Return value produced by this method.
+     */
     public static function refHandle(): ?string
     {
         return 'mailer-notification';
     }
 
+    /**
+     * Handles has content behavior for this Super Mailer component.
+     *
+     * @return bool Return value produced by this method.
+     */
     public static function hasContent(): bool
     {
         return true;
     }
 
+    /**
+     * Handles has titles behavior for this Super Mailer component.
+     *
+     * @return bool Return value produced by this method.
+     */
     public static function hasTitles(): bool
     {
         return true;
     }
 
+    /**
+     * Handles has uris behavior for this Super Mailer component.
+     *
+     * @return bool Return value produced by this method.
+     */
     public static function hasUris(): bool
     {
         return false;
     }
 
+    /**
+     * Handles is localized behavior for this Super Mailer component.
+     *
+     * @return bool Return value produced by this method.
+     */
     public static function isLocalized(): bool
     {
         return false;
     }
 
+    /**
+     * Handles track changes behavior for this Super Mailer component.
+     *
+     * @return bool Return value produced by this method.
+     */
     public static function trackChanges(): bool
     {
         return true;
     }
 
+    /**
+     * Handles has statuses behavior for this Super Mailer component.
+     *
+     * @return bool Return value produced by this method.
+     */
     public static function hasStatuses(): bool
     {
         return true;
     }
 
+    /**
+     * Handles find behavior for this Super Mailer component.
+     *
+     * @return MailerNotificationQuery Return value produced by this method.
+     */
     public static function find(): MailerNotificationQuery
     {
         return new MailerNotificationQuery(static::class);
     }
 
+    /**
+     * Returns the Craft element status based on the notification enabled flag.
+     *
+     * @return ?string Return value produced by this method.
+     */
     public function getStatus(): ?string
     {
         return $this->enabledNotification ? self::STATUS_ENABLED : self::STATUS_DISABLED;
     }
 
+    /**
+     * Returns the field layout for this element type, which is not used by notifications.
+     *
+     * @return ?\craft\models\FieldLayout Return value produced by this method.
+     */
     public function getFieldLayout(): ?\craft\models\FieldLayout
     {
         return null;
     }
 
+    /**
+     * Defines element index sources for notification listings.
+     *
+     * @param string $context context value used by this method.
+     * @return array Return value produced by this method.
+     */
     protected static function defineSources(string $context = 'index'): array
     {
         return [
@@ -116,6 +195,11 @@ class MailerNotification extends Element
         ];
     }
 
+    /**
+     * Defines optional table columns for the notification element index.
+     *
+     * @return array Return value produced by this method.
+     */
     protected static function defineTableAttributes(): array
     {
         return [
@@ -128,11 +212,22 @@ class MailerNotification extends Element
         ];
     }
 
+    /**
+     * Defines default columns for the notification element index.
+     *
+     * @param string $source source value used by this method.
+     * @return array Return value produced by this method.
+     */
     protected static function defineDefaultTableAttributes(string $source): array
     {
         return ['eventLabel', 'toEmails', 'emailSubject', 'preview'];
     }
 
+    /**
+     * Defines sort options supported by notification element indexes.
+     *
+     * @return array Return value produced by this method.
+     */
     protected static function defineSortOptions(): array
     {
         return [
@@ -160,6 +255,12 @@ class MailerNotification extends Element
         ];
     }
 
+    /**
+     * Defines element actions available for notification rows.
+     *
+     * @param string $source source value used by this method.
+     * @return array Return value produced by this method.
+     */
     protected static function defineActions(string $source = null): array
     {
         return [
@@ -174,26 +275,51 @@ class MailerNotification extends Element
         ];
     }
 
+    /**
+     * Defines attributes that Craft can search for notifications.
+     *
+     * @return array Return value produced by this method.
+     */
     protected static function defineSearchableAttributes(): array
     {
         return ['title', 'handle', 'eventClass', 'eventConstant', 'eventName', 'toEmails', 'emailSubject'];
     }
 
+    /**
+     * Returns the Control Panel edit URL for this notification.
+     *
+     * @return ?string Return value produced by this method.
+     */
     public function getCpEditUrl(): ?string
     {
         return $this->id ? UrlHelper::cpUrl('super-mailer/notifications/' . $this->id) : null;
     }
 
+    /**
+     * Provides Craft with the notification edit URL for element operations.
+     *
+     * @return ?string Return value produced by this method.
+     */
     protected function cpEditUrl(): ?string
     {
         return $this->getCpEditUrl();
     }
 
+    /**
+     * Returns the Control Panel preview URL for this notification.
+     *
+     * @return ?string Return value produced by this method.
+     */
     public function getPreviewUrl(): ?string
     {
         return $this->id ? UrlHelper::cpUrl('super-mailer/notifications/' . $this->id . '/preview') : null;
     }
 
+    /**
+     * Returns a readable event label for index tables and detail displays.
+     *
+     * @return string Return value produced by this method.
+     */
     public function getEventLabel(): string
     {
         if (!$this->eventClass || !$this->eventName) {
@@ -203,26 +329,56 @@ class MailerNotification extends Element
         return $this->eventClass . '::' . ($this->eventConstant ?: $this->eventName);
     }
 
+    /**
+     * Checks whether a user can view this notification element.
+     *
+     * @param User $user user value used by this method.
+     * @return bool Return value produced by this method.
+     */
     public function canView(User $user): bool
     {
         return $user->can('super-mailer:view-notifications') || $user->can('super-mailer:manage-notifications');
     }
 
+    /**
+     * Checks whether a user can save this notification element.
+     *
+     * @param User $user user value used by this method.
+     * @return bool Return value produced by this method.
+     */
     public function canSave(User $user): bool
     {
         return $user->can('super-mailer:manage-notifications');
     }
 
+    /**
+     * Checks whether a user can delete this notification element.
+     *
+     * @param User $user user value used by this method.
+     * @return bool Return value produced by this method.
+     */
     public function canDelete(User $user): bool
     {
         return $user->can('super-mailer:manage-notifications');
     }
 
+    /**
+     * Checks whether a user can duplicate this notification element.
+     *
+     * @param User $user user value used by this method.
+     * @return bool Return value produced by this method.
+     */
     public function canDuplicate(User $user): bool
     {
         return $user->can('super-mailer:manage-notifications');
     }
 
+    /**
+     * Renders custom HTML for notification element index columns.
+     *
+     * @param string $attribute attribute value used by this method.
+     * @return string Return value produced by this method.
+     */
     protected function attributeHtml(string $attribute): string
     {
         return match ($attribute) {
@@ -236,6 +392,11 @@ class MailerNotification extends Element
         };
     }
 
+    /**
+     * Prepares notification data before validation, including duplicate names and handles.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function beforeValidate(): bool
     {
         if (!$this->id && $this->duplicateOf instanceof self) {
@@ -251,6 +412,12 @@ class MailerNotification extends Element
         return parent::beforeValidate();
     }
 
+    /**
+     * Synchronizes Craft element enabled state with the notification enabled flag before save.
+     *
+     * @param bool $isNew isNew value used by this method.
+     * @return bool Return value produced by this method.
+     */
     public function beforeSave(bool $isNew): bool
     {
         $this->title = trim((string)$this->title);
@@ -273,6 +440,12 @@ class MailerNotification extends Element
         return parent::beforeSave($isNew);
     }
 
+    /**
+     * Persists notification-specific settings after Craft saves the element row.
+     *
+     * @param bool $isNew isNew value used by this method.
+     * @return void Return value produced by this method.
+     */
     public function afterSave(bool $isNew): void
     {
         if ($isNew) {
@@ -307,6 +480,11 @@ class MailerNotification extends Element
         parent::afterSave($isNew);
     }
 
+    /**
+     * Defines validation rules for notification element attributes.
+     *
+     * @return array Return value produced by this method.
+     */
     public function defineRules(): array
     {
         $rules = parent::defineRules();
@@ -325,6 +503,12 @@ class MailerNotification extends Element
         return $rules;
     }
 
+    /**
+     * Validates static email list values while allowing Twig expressions.
+     *
+     * @param string $attribute attribute value used by this method.
+     * @return void Return value produced by this method.
+     */
     public function validateEmailList(string $attribute): void
     {
         $value = (string)$this->{$attribute};
@@ -344,6 +528,11 @@ class MailerNotification extends Element
         }
     }
 
+    /**
+     * Ensures active notification handles remain unique.
+     *
+     * @return void Return value produced by this method.
+     */
     public function validateUniqueHandle(): void
     {
         if (!$this->handle) {
@@ -360,6 +549,11 @@ class MailerNotification extends Element
         }
     }
 
+    /**
+     * Ensures the configured event still exists in the registry.
+     *
+     * @return void Return value produced by this method.
+     */
     public function validateSelectedEvent(): void
     {
         if (!$this->eventClass || !$this->eventName) {
@@ -371,6 +565,11 @@ class MailerNotification extends Element
         }
     }
 
+    /**
+     * Requires at least one email body template path.
+     *
+     * @return void Return value produced by this method.
+     */
     public function validateTemplatePathRequired(): void
     {
         if (trim((string)$this->htmlTemplatePath) !== '' || trim((string)$this->plainTextTemplatePath) !== '') {
@@ -382,6 +581,11 @@ class MailerNotification extends Element
         $this->addError('plainTextTemplatePath', $message);
     }
 
+    /**
+     * Normalizes condition state after loading a notification element.
+     *
+     * @return void Return value produced by this method.
+     */
     public function afterFind(): void
     {
         parent::afterFind();
@@ -389,17 +593,34 @@ class MailerNotification extends Element
         $this->conditionRules = $this->normalizeConditionRules($this->conditionRules);
     }
 
+    /**
+     * Returns cleaned condition rows for saving, editing, and evaluating.
+     *
+     * @return array Return value produced by this method.
+     */
     public function normalizedConditionRules(): array
     {
         return $this->normalizeConditionRules($this->conditionRules);
     }
 
+    /**
+     * Converts blank strings into null for optional record columns.
+     *
+     * @param string $value value value used by this method.
+     * @return ?string Return value produced by this method.
+     */
     private function blankToNull(?string $value): ?string
     {
         $value = trim((string)$value);
         return $value === '' ? null : $value;
     }
 
+    /**
+     * Cleans submitted or stored condition rows into a consistent structure.
+     *
+     * @param array|string|null $rules rules value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function normalizeConditionRules(array|string|null $rules): array
     {
         if (is_string($rules)) {
@@ -435,12 +656,24 @@ class MailerNotification extends Element
         return $normalized;
     }
 
+    /**
+     * Generates a handle from the notification title.
+     *
+     * @param string $title title value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function generateHandle(string $title): string
     {
         $handle = lcfirst(str_replace(' ', '', ucwords(preg_replace('/[^a-zA-Z0-9]+/', ' ', $title))));
         return $handle !== '' ? $handle : 'notification';
     }
 
+    /**
+     * Builds a unique title for duplicated notifications.
+     *
+     * @param string $title title value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function uniqueDuplicateTitle(string $title): string
     {
         $baseTitle = trim($title) !== '' ? trim($title) . ' copy' : Craft::t('super-mailer', 'Notification copy');
@@ -455,6 +688,12 @@ class MailerNotification extends Element
         return $newTitle;
     }
 
+    /**
+     * Builds a unique handle for duplicated notifications.
+     *
+     * @param string $handle handle value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function uniqueDuplicateHandle(string $handle): string
     {
         $baseHandle = trim($handle) !== '' ? trim($handle) . 'Copy' : 'notificationCopy';
@@ -469,6 +708,12 @@ class MailerNotification extends Element
         return $newHandle;
     }
 
+    /**
+     * Shortens an email list for compact display in the element index.
+     *
+     * @param string $value value value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function shortenList(string $value): string
     {
         $emails = Plugin::getInstance()->getMailer()->parseEmailList($value);

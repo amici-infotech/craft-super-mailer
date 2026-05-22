@@ -33,11 +33,21 @@ class EmailLogRecord extends ActiveRecord
     public const STATUS_SUCCESS = 'success';
     public const STATUS_FAILED = 'failed';
 
+    /**
+     * Returns the database table name used by this ActiveRecord.
+     *
+     * @return string Return value produced by this method.
+     */
     public static function tableName(): string
     {
         return '{{%super_mailer_email_logs}}';
     }
 
+    /**
+     * Defines validation rules for this model or record.
+     *
+     * @return array Return value produced by this method.
+     */
     public function rules(): array
     {
         return [

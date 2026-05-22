@@ -12,10 +12,18 @@ use Throwable;
 use yii\base\Component;
 use yii\base\Event;
 
+/**
+ * Registers event listeners, normalizes event context, evaluates conditions, and queues notification send jobs.
+ */
 class NotificationService extends Component
 {
     private bool $_listenersRegistered = false;
 
+    /**
+     * Registers runtime event listeners for all currently enabled notification definitions.
+     *
+     * @return void Return value produced by this method.
+     */
     public function registerEnabledNotificationListeners(): void
     {
         if ($this->_listenersRegistered || !$this->notificationTableExists()) {
@@ -72,6 +80,14 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Converts a live Yii event into serializable context that can be safely queued and logged.
+     *
+     * @param string $class class value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @param Event $event event value used by this method.
+     * @return array Return value produced by this method.
+     */
     public function normalizeEvent(string $class, string $eventName, Event $event): array
     {
         $element = $this->eventElement($event);
@@ -99,6 +115,13 @@ class NotificationService extends Component
         ];
     }
 
+    /**
+     * Builds a synthetic event context for previewing a notification before a real event fires.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param int $elementId elementId value used by this method.
+     * @return array Return value produced by this method.
+     */
     public function previewEventContext(MailerNotification $notification, ?int $elementId = null): array
     {
         $class = (string)$notification->eventClass;
@@ -122,6 +145,13 @@ class NotificationService extends Component
         return $context;
     }
 
+    /**
+     * Returns detailed condition evaluation data for the preview condition debug table.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param array $context context value used by this method.
+     * @return array Return value produced by this method.
+     */
     public function conditionDebug(MailerNotification $notification, array $context): array
     {
         $rules = [];
@@ -163,6 +193,12 @@ class NotificationService extends Component
         ];
     }
 
+    /**
+     * Handles should ignore event behavior for this Super Mailer component.
+     *
+     * @param Event $event event value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function shouldIgnoreEvent(Event $event): bool
     {
         $element = $this->eventElement($event);
@@ -170,6 +206,14 @@ class NotificationService extends Component
         return $element instanceof Element && $this->isNonCanonicalElement($element);
     }
 
+    /**
+     * Evaluates configured table and PHP conditions to decide whether a notification should queue.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param Event $event event value used by this method.
+     * @param array $context context value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function conditionsPass(MailerNotification $notification, Event $event, array $context): bool
     {
         $rules = $notification->normalizedConditionRules();
@@ -193,6 +237,13 @@ class NotificationService extends Component
             : !in_array(false, $results, true);
     }
 
+    /**
+     * Evaluates one table condition row against normalized event context.
+     *
+     * @param array $rule rule value used by this method.
+     * @param array $context context value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function conditionRulePasses(array $rule, array $context): bool
     {
         $field = (string)($rule['field'] ?? '');
@@ -213,6 +264,13 @@ class NotificationService extends Component
         return (string)$actual === (string)($expectedValues[0] ?? '');
     }
 
+    /**
+     * Reads the actual context value used by a condition row field.
+     *
+     * @param string $field field value used by this method.
+     * @param array $context context value used by this method.
+     * @return mixed Return value produced by this method.
+     */
     private function conditionValue(string $field, array $context): mixed
     {
         $element = is_array($context['element'] ?? null) ? $context['element'] : [];
@@ -229,6 +287,12 @@ class NotificationService extends Component
         };
     }
 
+    /**
+     * Normalizes element status context into enabled or disabled values for status conditions.
+     *
+     * @param array $element element value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function statusConditionValue(array $element): string
     {
         if (array_key_exists('enabled', $element)) {
@@ -238,6 +302,12 @@ class NotificationService extends Component
         return $this->normalizeStatusConditionValue($element['status'] ?? null) ?? 'disabled';
     }
 
+    /**
+     * Converts common truthy, falsy, and Craft status strings into condition comparison values.
+     *
+     * @param mixed $value value value used by this method.
+     * @return ?string Return value produced by this method.
+     */
     private function normalizeStatusConditionValue(mixed $value): ?string
     {
         if (is_bool($value)) {
@@ -252,11 +322,24 @@ class NotificationService extends Component
         };
     }
 
+    /**
+     * Parses a comma-separated condition value into trimmed comparison tokens.
+     *
+     * @param string $value value value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function conditionExpectedValues(string $value): array
     {
         return array_values(array_filter(array_map('trim', explode(',', $value)), static fn(string $item): bool => $item !== ''));
     }
 
+    /**
+     * Evaluates a custom PHP condition expression against the live event object.
+     *
+     * @param string $expression expression value used by this method.
+     * @param Event $event event value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function phpConditionPasses(string $expression, Event $event): bool
     {
         try {
@@ -267,6 +350,12 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Rehydrates the element referenced by serialized event context when possible.
+     *
+     * @param array $context context value used by this method.
+     * @return ?Element Return value produced by this method.
+     */
     private function contextElement(array $context): ?Element
     {
         $elementData = is_array($context['element'] ?? null) ? $context['element'] : null;
@@ -293,6 +382,11 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Checks whether notification records are available before listener registration runs.
+     *
+     * @return bool Return value produced by this method.
+     */
     private function notificationTableExists(): bool
     {
         try {
@@ -302,6 +396,12 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Finds the primary Craft element associated with a live event object.
+     *
+     * @param Event $event event value used by this method.
+     * @return ?Element Return value produced by this method.
+     */
     private function eventElement(Event $event): ?Element
     {
         foreach (['element', 'entry', 'asset', 'category', 'user'] as $property) {
@@ -337,6 +437,12 @@ class NotificationService extends Component
         return null;
     }
 
+    /**
+     * Serializes an element into queue-safe context while preserving useful attributes and field values.
+     *
+     * @param Element $element element value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function elementData(Element $element): array
     {
         $fieldData = $this->fieldData($element);
@@ -380,6 +486,12 @@ class NotificationService extends Component
         return $data;
     }
 
+    /**
+     * Detects draft, revision, derivative, and provisional elements that should not trigger sends.
+     *
+     * @param Element $element element value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function isNonCanonicalElement(Element $element): bool
     {
         return ElementHelper::isDraftOrRevision($element)
@@ -387,6 +499,14 @@ class NotificationService extends Component
             || $element->isProvisionalDraft;
     }
 
+    /**
+     * Determines whether an event represents newly created content.
+     *
+     * @param Event $event event value used by this method.
+     * @param Element $element element value used by this method.
+     * @param array $data data value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function isNewEvent(Event $event, ?Element $element, array $data): bool
     {
         if (!empty($data['isNew'])) {
@@ -400,6 +520,12 @@ class NotificationService extends Component
         return $element instanceof Element && $this->requestIsFreshDraftApply($element);
     }
 
+    /**
+     * Detects Craft draft-apply requests that represent publishing fresh content.
+     *
+     * @param Element $element element value used by this method.
+     * @return bool Return value produced by this method.
+     */
     private function requestIsFreshDraftApply(Element $element): bool
     {
         try {
@@ -420,6 +546,15 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Creates and populates a synthetic event instance for preview rendering.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @param string $eventType eventType value used by this method.
+     * @param Element $previewElement previewElement value used by this method.
+     * @param int $elementId elementId value used by this method.
+     * @return Event Return value produced by this method.
+     */
     private function previewEvent(MailerNotification $notification, string $eventType, ?Element $previewElement = null, ?int $elementId = null): Event
     {
         $event = $this->createEvent($eventType);
@@ -434,6 +569,13 @@ class NotificationService extends Component
         return $event;
     }
 
+    /**
+     * Looks up the event object class configured for a notification event.
+     *
+     * @param string $class class value used by this method.
+     * @param string $eventName eventName value used by this method.
+     * @return string Return value produced by this method.
+     */
     private function eventType(string $class, string $eventName): string
     {
         foreach (Plugin::getInstance()->getEvents()->getEvents() as $event) {
@@ -445,6 +587,12 @@ class NotificationService extends Component
         return Event::class;
     }
 
+    /**
+     * Instantiates an event class when possible, falling back to a base Yii event.
+     *
+     * @param string $eventType eventType value used by this method.
+     * @return Event Return value produced by this method.
+     */
     private function createEvent(string $eventType): Event
     {
         try {
@@ -457,6 +605,14 @@ class NotificationService extends Component
         return new Event();
     }
 
+    /**
+     * Chooses an appropriate sender value for a preview event.
+     *
+     * @param string $class class value used by this method.
+     * @param Element $previewElement previewElement value used by this method.
+     * @param int $elementId elementId value used by this method.
+     * @return mixed Return value produced by this method.
+     */
     private function previewSender(string $class, ?Element $previewElement = null, ?int $elementId = null): mixed
     {
         if (is_subclass_of($class, Element::class)) {
@@ -474,6 +630,14 @@ class NotificationService extends Component
         return $class;
     }
 
+    /**
+     * Fills public preview event properties with matching elements or scalar defaults.
+     *
+     * @param Event $event event value used by this method.
+     * @param Element $previewElement previewElement value used by this method.
+     * @param int $elementId elementId value used by this method.
+     * @return void Return value produced by this method.
+     */
     private function populatePreviewEventProperties(Event $event, ?Element $previewElement = null, ?int $elementId = null): void
     {
         try {
@@ -516,6 +680,13 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Sets safe scalar defaults on synthetic preview event properties.
+     *
+     * @param Event $event event value used by this method.
+     * @param \ReflectionProperty $property property value used by this method.
+     * @return void Return value produced by this method.
+     */
     private function populateScalarPreviewProperty(Event $event, \ReflectionProperty $property): void
     {
         $type = $property->getType();
@@ -539,6 +710,14 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Finds related elements from existing preview event values through matching getter methods.
+     *
+     * @param Event $event event value used by this method.
+     * @param string $propertyName propertyName value used by this method.
+     * @param string $className className value used by this method.
+     * @return ?Element Return value produced by this method.
+     */
     private function relatedPreviewElement(Event $event, string $propertyName, string $className): ?Element
     {
         foreach (get_object_vars($event) as $value) {
@@ -561,6 +740,14 @@ class NotificationService extends Component
         return null;
     }
 
+    /**
+     * Finds a preview element by ID from event-related element classes.
+     *
+     * @param string $eventClass eventClass value used by this method.
+     * @param string $eventType eventType value used by this method.
+     * @param int $elementId elementId value used by this method.
+     * @return ?Element Return value produced by this method.
+     */
     private function previewElement(string $eventClass, string $eventType, int $elementId): ?Element
     {
         foreach ($this->previewElementClasses($eventClass, $eventType) as $className) {
@@ -573,6 +760,13 @@ class NotificationService extends Component
         return null;
     }
 
+    /**
+     * Determines which element classes may be valid preview targets for an event.
+     *
+     * @param string $eventClass eventClass value used by this method.
+     * @param string $eventType eventType value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function previewElementClasses(string $eventClass, string $eventType): array
     {
         $classes = [];
@@ -602,6 +796,13 @@ class NotificationService extends Component
         return array_values(array_unique($classes));
     }
 
+    /**
+     * Loads one element by ID while ignoring element status filters.
+     *
+     * @param string $className className value used by this method.
+     * @param int $elementId elementId value used by this method.
+     * @return ?Element Return value produced by this method.
+     */
     private function elementById(string $className, int $elementId): ?Element
     {
         try {
@@ -616,6 +817,12 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Loads the most recently updated element of a class for preview fallback.
+     *
+     * @param string $className className value used by this method.
+     * @return ?Element Return value produced by this method.
+     */
     private function latestElement(string $className): ?Element
     {
         try {
@@ -634,6 +841,12 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Extracts scalar custom field values from an element for serialized context.
+     *
+     * @param Element $element element value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function fieldData(Element $element): array
     {
         try {
@@ -643,6 +856,12 @@ class NotificationService extends Component
         }
     }
 
+    /**
+     * Recursively filters values down to queue-safe scalar and date data.
+     *
+     * @param array $value value value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function scalarArray(array $value): array
     {
         $data = [];

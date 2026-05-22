@@ -41,6 +41,11 @@ class Plugin extends CraftPlugin
     public bool $hasCpSettings = true;
     public bool $hasCpSection = true;
 
+    /**
+     * Initializes the class and registers its Craft components or assets.
+     *
+     * @return void Return value produced by this method.
+     */
     public function init(): void
     {
         parent::init();
@@ -62,16 +67,31 @@ class Plugin extends CraftPlugin
         );
     }
 
+    /**
+     * Creates the settings model used by Craft for plugin configuration.
+     *
+     * @return ?Model Return value produced by this method.
+     */
     protected function createSettingsModel(): ?Model
     {
         return new Settings();
     }
 
+    /**
+     * Redirects Craft plugin settings access to the custom Super Mailer settings page.
+     *
+     * @return mixed Return value produced by this method.
+     */
     public function getSettingsResponse(): mixed
     {
         return Craft::$app->getResponse()->redirect(UrlHelper::cpUrl('super-mailer/settings'));
     }
 
+    /**
+     * Builds the Control Panel navigation item and subnavigation for Super Mailer.
+     *
+     * @return ?array Return value produced by this method.
+     */
     public function getCpNavItem(): ?array
     {
         $item = parent::getCpNavItem();
@@ -96,11 +116,21 @@ class Plugin extends CraftPlugin
         return $item;
     }
 
+    /**
+     * Returns the SVG mask icon path used by the Craft CP navigation.
+     *
+     * @return ?string Return value produced by this method.
+     */
     protected function cpNavIconPath(): ?string
     {
         return $this->getBasePath() . DIRECTORY_SEPARATOR . 'icon-mask.svg';
     }
 
+    /**
+     * Registers Super Mailer Control Panel URL rules.
+     *
+     * @return void Return value produced by this method.
+     */
     private function _registerRoutes(): void
     {
         Event::on(
@@ -125,6 +155,11 @@ class Plugin extends CraftPlugin
         );
     }
 
+    /**
+     * Registers the notification element type with Craft.
+     *
+     * @return void Return value produced by this method.
+     */
     private function _registerElementTypes(): void
     {
         Event::on(
@@ -136,6 +171,11 @@ class Plugin extends CraftPlugin
         );
     }
 
+    /**
+     * Registers Super Mailer user permissions.
+     *
+     * @return void Return value produced by this method.
+     */
     private function _registerPermissions(): void
     {
         Event::on(

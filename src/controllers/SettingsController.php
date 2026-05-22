@@ -6,10 +6,18 @@ use Craft;
 use craft\web\Controller;
 use yii\web\Response;
 
+/**
+ * Control Panel controller for displaying and saving Super Mailer plugin settings.
+ */
 class SettingsController extends Controller
 {
     protected array|bool|int $allowAnonymous = false;
 
+    /**
+     * Renders the default listing screen for this controller.
+     *
+     * @return Response Return value produced by this method.
+     */
     public function actionIndex(): Response
     {
         $this->requirePermission('super-mailer:manage-notifications');
@@ -19,6 +27,11 @@ class SettingsController extends Controller
         ]);
     }
 
+    /**
+     * Validates and saves notification or settings form submissions.
+     *
+     * @return ?Response Return value produced by this method.
+     */
     public function actionSave(): ?Response
     {
         $this->requirePostRequest();

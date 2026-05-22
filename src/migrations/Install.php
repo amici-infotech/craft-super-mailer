@@ -3,8 +3,16 @@ namespace amici\SuperMailer\migrations;
 
 use craft\db\Migration;
 
+/**
+ * Install migration that creates Super Mailer notification and email log tables for fresh plugin installs.
+ */
 class Install extends Migration
 {
+    /**
+     * Applies this database migration safely.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function safeUp(): bool
     {
         if (!$this->db->tableExists('{{%super_mailer_notifications}}')) {
@@ -51,6 +59,11 @@ class Install extends Migration
         return true;
     }
 
+    /**
+     * Reverts this database migration safely.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function safeDown(): bool
     {
         $this->dropTableIfExists('{{%super_mailer_email_logs}}');
@@ -58,6 +71,11 @@ class Install extends Migration
         return true;
     }
 
+    /**
+     * Creates the email log table and indexes for fresh installs.
+     *
+     * @return void Return value produced by this method.
+     */
     private function createEmailLogsTable(): void
     {
         if ($this->db->tableExists('{{%super_mailer_email_logs}}')) {

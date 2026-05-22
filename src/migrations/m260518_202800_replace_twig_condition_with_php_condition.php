@@ -3,8 +3,16 @@ namespace amici\SuperMailer\migrations;
 
 use craft\db\Migration;
 
+/**
+ * Migration that replaces the legacy Twig condition column with PHP condition support.
+ */
 class m260518_202800_replace_twig_condition_with_php_condition extends Migration
 {
+    /**
+     * Applies this database migration safely.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function safeUp(): bool
     {
         $table = '{{%super_mailer_notifications}}';
@@ -25,6 +33,11 @@ class m260518_202800_replace_twig_condition_with_php_condition extends Migration
         return true;
     }
 
+    /**
+     * Reverts this database migration safely.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function safeDown(): bool
     {
         $table = '{{%super_mailer_notifications}}';

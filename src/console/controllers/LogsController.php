@@ -7,6 +7,9 @@ use yii\console\Controller;
 use yii\console\ExitCode;
 use yii\helpers\Console;
 
+/**
+ * Controller for email log browsing, detail views, deletion, resending, and console log maintenance, depending on namespace.
+ */
 class LogsController extends Controller
 {
     /**

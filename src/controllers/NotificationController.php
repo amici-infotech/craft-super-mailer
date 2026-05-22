@@ -14,16 +14,31 @@ use craft\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
+/**
+ * Control Panel controller for listing, editing, saving, deleting, previewing, and test-sending notifications.
+ */
 class NotificationController extends Controller
 {
     protected array|bool|int $allowAnonymous = false;
 
+    /**
+     * Renders the default listing screen for this controller.
+     *
+     * @return Response Return value produced by this method.
+     */
     public function actionIndex(): Response
     {
         $this->requirePermission('super-mailer:view-notifications');
         return $this->renderTemplate('super-mailer/notifications/index');
     }
 
+    /**
+     * Renders the notification create/edit screen with event and condition metadata.
+     *
+     * @param int $notificationId notificationId value used by this method.
+     * @param MailerNotification $notification notification value used by this method.
+     * @return Response Return value produced by this method.
+     */
     public function actionEdit(?int $notificationId = null, ?MailerNotification $notification = null): Response
     {
         $this->requirePermission('super-mailer:manage-notifications');
@@ -64,6 +79,11 @@ class NotificationController extends Controller
         ]);
     }
 
+    /**
+     * Validates and saves notification or settings form submissions.
+     *
+     * @return ?Response Return value produced by this method.
+     */
     public function actionSave(): ?Response
     {
         $this->requirePostRequest();
@@ -120,6 +140,11 @@ class NotificationController extends Controller
         return $this->redirectToPostedUrl($notification);
     }
 
+    /**
+     * Deletes the requested notification or email log after permission checks.
+     *
+     * @return ?Response Return value produced by this method.
+     */
     public function actionDelete(): ?Response
     {
         $this->requirePostRequest();
@@ -151,6 +176,12 @@ class NotificationController extends Controller
         );
     }
 
+    /**
+     * Renders the notification preview page for a saved notification.
+     *
+     * @param int $notificationId notificationId value used by this method.
+     * @return Response Return value produced by this method.
+     */
     public function actionPreview(int $notificationId): Response
     {
         $this->requirePermission('super-mailer:view-notifications');
@@ -173,6 +204,11 @@ class NotificationController extends Controller
         ]);
     }
 
+    /**
+     * Sends the current preview context to a manually supplied test recipient.
+     *
+     * @return ?Response Return value produced by this method.
+     */
     public function actionTestSend(): ?Response
     {
         $this->requirePostRequest();
@@ -210,6 +246,11 @@ class NotificationController extends Controller
         return $this->redirectToPostedUrl();
     }
 
+    /**
+     * Returns condition row fields shown in the notification editor.
+     *
+     * @return array Return value produced by this method.
+     */
     private function conditionFieldOptions(): array
     {
         $options = [
@@ -224,6 +265,11 @@ class NotificationController extends Controller
         return $options;
     }
 
+    /**
+     * Returns selectable suggestion lists for condition fields such as sites and entry metadata.
+     *
+     * @return array Return value produced by this method.
+     */
     private function conditionSuggestions(): array
     {
         $sites = array_map(
@@ -264,6 +310,12 @@ class NotificationController extends Controller
         ];
     }
 
+    /**
+     * Builds Craft element chip metadata for saved author condition user IDs.
+     *
+     * @param MailerNotification $notification notification value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function conditionAuthorOptions(MailerNotification $notification): array
     {
         $ids = [];
@@ -308,6 +360,12 @@ class NotificationController extends Controller
         return $options;
     }
 
+    /**
+     * Loads recent email log rows for display on a notification edit page.
+     *
+     * @param int $notificationId notificationId value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function recentLogs(int $notificationId): array
     {
         $logs = (new Query())
@@ -325,6 +383,12 @@ class NotificationController extends Controller
         return $logs;
     }
 
+    /**
+     * Decodes a JSON-stored email list value into an array for display.
+     *
+     * @param string $value value value used by this method.
+     * @return array Return value produced by this method.
+     */
     private function decodeList(?string $value): array
     {
         if (!$value) {

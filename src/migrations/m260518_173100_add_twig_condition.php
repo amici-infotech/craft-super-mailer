@@ -3,8 +3,16 @@ namespace amici\SuperMailer\migrations;
 
 use craft\db\Migration;
 
+/**
+ * Migration that adds the legacy Twig condition column used by earlier notification builds.
+ */
 class m260518_173100_add_twig_condition extends Migration
 {
+    /**
+     * Applies this database migration safely.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function safeUp(): bool
     {
         if (!$this->db->columnExists('{{%super_mailer_notifications}}', 'phpCondition')) {
@@ -18,6 +26,11 @@ class m260518_173100_add_twig_condition extends Migration
         return true;
     }
 
+    /**
+     * Reverts this database migration safely.
+     *
+     * @return bool Return value produced by this method.
+     */
     public function safeDown(): bool
     {
         if ($this->db->columnExists('{{%super_mailer_notifications}}', 'phpCondition')) {
