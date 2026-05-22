@@ -3,6 +3,9 @@ namespace amici\SuperMailer\services;
 
 use Craft;
 use craft\base\Element;
+use craft\base\FieldInterface;
+use craft\elements\Category;
+use craft\elements\Entry;
 use craft\services\Elements;
 use ReflectionClass;
 use Solspace\Freeform\Elements\Submission as FreeformSubmission;
@@ -16,6 +19,9 @@ use yii\base\Component;
 class EventRegistryService extends Component
 {
     private ?array $_events = null;
+    private array $_conditionFields = [];
+    private array $_elementConditionFields = [];
+    private array $_fieldLayoutConditionFields = [];
 
     /**
      * Builds and caches the complete list of supported events available to notifications.
@@ -45,6 +51,7 @@ class EventRegistryService extends Component
                 'eventName' => $eventName,
                 'eventType' => $eventType,
                 'variables' => $this->eventVariables($eventType),
+                'conditionFields' => $this->conditionFields($class, $eventType),
                 'label' => $this->labelFor($class, $constant, $eventName),
                 'value' => $this->encodeEventValue($class, $eventName, $constant),
                 'code' => $this->exampleCode($class, $constant, $eventType),
@@ -73,6 +80,7 @@ class EventRegistryService extends Component
                 'eventName' => $event['eventName'],
                 'eventType' => $event['eventType'],
                 'variables' => $event['variables'],
+                'conditionFields' => $event['conditionFields'],
                 'code' => $event['code'],
             ];
         }
@@ -544,6 +552,1096 @@ class EventRegistryService extends Component
         usort($variables, static fn(array $a, array $b): int => strcmp($a['name'], $b['name']));
 
         return $variables;
+    }
+
+    /**
+     * Builds the condition field metadata exposed to the condition builder for one selected event.
+     *
+     * The returned list is intentionally event-specific. It starts with useful scalar public event
+     * properties, then adds element-level filters for the primary element class, and finally adds
+     * custom field layout filters with UI hints and option values where Craft exposes them.
+     *
+     * @param string $class Event listener class selected in the event picker.
+     * @param string $eventType Concrete Yii event class dispatched for that listener.
+     * @return array Condition field definitions consumed by the editor JavaScript.
+     */
+    private function conditionFields(string $class, string $eventType): array
+    {
+        $cacheKey = $class . '|' . $eventType;
+        if (isset($this->_conditionFields[$cacheKey])) {
+            return $this->_conditionFields[$cacheKey];
+        }
+
+        $fields = [[
+            'label' => Craft::t('super-mailer', 'Event: Is New'),
+            'value' => 'event.isNew',
+            'type' => 'booleanToggle',
+            'expression' => '(bool)($event->isNew ?? false)',
+        ]];
+
+        $fields = array_merge($fields, $this->eventPropertyConditionFields($eventType));
+
+        foreach ($this->conditionElementClasses($class, $eventType) as $elementClass) {
+            $fields = array_merge($fields, $this->elementConditionFields($elementClass));
+
+            if (!$this->isFormElementClass($elementClass)) {
+                $fields = array_merge($fields, $this->fieldLayoutConditionFields($elementClass));
+            }
+        }
+
+        return $this->_conditionFields[$cacheKey] = $this->uniqueConditionFields($fields);
+    }
+
+    /**
+     * Creates filter definitions for scalar public variables on the event object.
+     *
+     * Object and array properties are omitted because they usually need custom code, while scalar
+     * and boolean properties can be represented cleanly by the condition table.
+     *
+     * @param string $eventType Concrete Yii event class to inspect.
+     * @return array Event property filter definitions.
+     */
+    private function eventPropertyConditionFields(string $eventType): array
+    {
+        $fields = [];
+
+        try {
+            if (!class_exists($eventType)) {
+                return $fields;
+            }
+
+            $reflection = new ReflectionClass($eventType);
+            foreach ($reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+                if ($property->isStatic()) {
+                    continue;
+                }
+
+                $name = $property->getName();
+                if (in_array($name, ['sender', 'name', 'handled', 'data', 'isValid'], true)) {
+                    continue;
+                }
+
+                $type = $property->getType();
+                if ($type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
+                    continue;
+                }
+
+                $typeName = $type instanceof \ReflectionNamedType ? $type->getName() : 'mixed';
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Event: {name}', ['name' => $this->titleFromHandle($name)]),
+                    'value' => 'event.' . $name,
+                    'type' => $this->conditionInputTypeFromPhpType($typeName),
+                    'expression' => '($event->' . $name . ' ?? null)',
+                    'placeholder' => $typeName === 'bool' ? '' : $name,
+                ];
+            }
+        } catch (Throwable) {
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Finds element classes that can reasonably provide element attributes and field layout filters.
+     *
+     * The listener class itself is used when it is an element type. The event type is also inspected for
+     * public element properties so events like submission-processing events can expose their submission
+     * element fields without hardcoding each plugin's internals.
+     *
+     * @param string $class Selected event listener class.
+     * @param string $eventType Concrete Yii event class for the event.
+     * @return array Unique element class names.
+     */
+    private function conditionElementClasses(string $class, string $eventType): array
+    {
+        $classes = [];
+
+        if (is_subclass_of($class, Element::class)) {
+            $classes[] = $class;
+        }
+
+        try {
+            if (class_exists($eventType)) {
+                $reflection = new ReflectionClass($eventType);
+                foreach ($reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+                    $type = $property->getType();
+                    if (!$type instanceof \ReflectionNamedType || $type->isBuiltin()) {
+                        continue;
+                    }
+
+                    $className = $type->getName();
+                    if (is_subclass_of($className, Element::class)) {
+                        $classes[] = $className;
+                    }
+                }
+            }
+        } catch (Throwable) {
+        }
+
+        return array_values(array_unique($classes));
+    }
+
+    /**
+     * Builds element-level filters such as status, site, author, section, and declared public properties.
+     *
+     * Craft's status filter is only shown when the element type advertises statuses. Entry-specific
+     * filters are only returned for Entry events, while custom element public properties are discovered
+     * generically when they are scalar enough for a table condition.
+     *
+     * @param string $elementClass Element class being inspected.
+     * @return array Element filter definitions.
+     */
+    private function elementConditionFields(string $elementClass): array
+    {
+        if (isset($this->_elementConditionFields[$elementClass])) {
+            return $this->_elementConditionFields[$elementClass];
+        }
+
+        $fields = [];
+
+        try {
+            if ($this->isCommerceElementClass($elementClass)) {
+                return $this->_elementConditionFields[$elementClass] = $this->commerceElementConditionFields($elementClass);
+            }
+
+            if ($this->isFormElementClass($elementClass)) {
+                return $this->_elementConditionFields[$elementClass] = $this->formElementConditionFields($elementClass);
+            }
+
+            if ($this->isSubmissionElementClass($elementClass)) {
+                return $this->_elementConditionFields[$elementClass] = $this->submissionElementConditionFields($elementClass);
+            }
+
+            if (method_exists($elementClass, 'hasStatuses') && $elementClass::hasStatuses()) {
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Element: Status'),
+                    'value' => 'element.status',
+                    'type' => 'toggle',
+                    'expression' => '(($event->sender->enabled ?? false) ? \'enabled\' : \'disabled\')',
+                ];
+            }
+
+            if (method_exists($elementClass, 'isLocalized') && $elementClass::isLocalized()) {
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Element: Site'),
+                    'value' => 'element.siteId',
+                    'type' => 'selectize',
+                    'options' => $this->siteOptions(),
+                    'expression' => '((string)($event->sender->siteId ?? \'\'))',
+                ];
+            }
+
+            if (is_a($elementClass, Category::class, true)) {
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Category: Group'),
+                    'value' => 'element.groupId',
+                    'type' => 'selectize',
+                    'options' => $this->categoryGroupOptions(),
+                    'expression' => '((string)($event->sender->groupId ?? \'\'))',
+                ];
+            }
+
+            if (is_a($elementClass, Entry::class, true)) {
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Entry: Section'),
+                    'value' => 'entry.section.handle',
+                    'type' => 'selectize',
+                    'options' => $this->sectionOptions(),
+                    'expression' => '($event->sender->section->handle ?? null)',
+                ];
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Entry: Entry Type'),
+                    'value' => 'entry.type.handle',
+                    'type' => 'selectize',
+                    'options' => $this->entryTypeOptions(),
+                    'expression' => '($event->sender->type->handle ?? null)',
+                ];
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Entry: Author'),
+                    'value' => 'entry.authorId',
+                    'type' => 'author',
+                    'expression' => '((string)($event->sender->authorId ?? \'\'))',
+                ];
+            }
+
+            $reflection = new ReflectionClass($elementClass);
+            foreach ($reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+                if ($property->isStatic() || $property->getDeclaringClass()->getName() === Element::class) {
+                    continue;
+                }
+
+                $name = $property->getName();
+                if ($this->isIgnoredElementProperty($name)) {
+                    continue;
+                }
+
+                $type = $property->getType();
+                if ($type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
+                    continue;
+                }
+
+                $typeName = $type instanceof \ReflectionNamedType ? $type->getName() : 'mixed';
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Element: {name}', ['name' => $this->titleFromHandle($name)]),
+                    'value' => 'element.' . $name,
+                    'type' => $this->conditionInputTypeFromPhpType($typeName),
+                    'expression' => '($event->sender->' . $name . ' ?? null)',
+                    'placeholder' => $typeName === 'bool' ? '' : $name,
+                ];
+            }
+        } catch (Throwable) {
+        }
+
+        return $this->_elementConditionFields[$elementClass] = $fields;
+    }
+
+    /**
+     * Builds a deliberately small filter set for form definition elements.
+     *
+     * Form element records expose many administrative settings as public properties. Those are useful for
+     * plugin internals but noisy for notification filters, so the condition table only exposes the form
+     * handle with known handles preloaded.
+     *
+     * @param string $elementClass Form element class.
+     * @return array Form filter definitions.
+     */
+    private function formElementConditionFields(string $elementClass): array
+    {
+        return [
+            [
+                'label' => Craft::t('super-mailer', 'Form: Handle'),
+                'value' => 'element.handle',
+                'type' => 'selectize',
+                'options' => $this->formHandleOptions($elementClass),
+                'expression' => '($event->sender->handle ?? null)',
+            ],
+        ];
+    }
+
+    /**
+     * Builds a deliberately small filter set for submission elements.
+     *
+     * Submission element records contain tracking IDs, request metadata, and storage internals. The
+     * filter UI only exposes the practical business filters: submission status, form, and submitting user.
+     *
+     * @param string $elementClass Submission element class.
+     * @return array Submission filter definitions.
+     */
+    private function submissionElementConditionFields(string $elementClass): array
+    {
+        return [
+            [
+                'label' => Craft::t('super-mailer', 'Submission: Status'),
+                'value' => 'element.statusId',
+                'type' => 'selectize',
+                'options' => $this->submissionStatusOptions($elementClass),
+                'expression' => '((string)($event->sender->statusId ?? \'\'))',
+            ],
+            [
+                'label' => Craft::t('super-mailer', 'Submission: Form'),
+                'value' => 'element.formId',
+                'type' => 'selectize',
+                'options' => $this->formIdOptions($elementClass),
+                'expression' => '((string)($event->sender->formId ?? \'\'))',
+            ],
+            [
+                'label' => Craft::t('super-mailer', 'Submission: User'),
+                'value' => 'element.userId',
+                'type' => 'author',
+                'expression' => '((string)($event->sender->userId ?? \'\'))',
+            ],
+        ];
+    }
+
+    /**
+     * Builds curated filters for Craft Commerce element classes.
+     *
+     * Commerce elements expose many calculated prices, dimensions, snapshots, and operational fields as
+     * public or magic properties. The condition table only exposes values that map to real business
+     * decisions and can be compared reliably from event context.
+     *
+     * @param string $elementClass Commerce element class being inspected.
+     * @return array Commerce-specific condition field definitions.
+     */
+    private function commerceElementConditionFields(string $elementClass): array
+    {
+        $fields = [];
+
+        if (method_exists($elementClass, 'hasStatuses') && $elementClass::hasStatuses()) {
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Element: Status'),
+                'value' => 'element.status',
+                'type' => 'toggle',
+                'expression' => '(($event->sender->enabled ?? false) ? \'enabled\' : \'disabled\')',
+            ];
+        }
+
+        if (method_exists($elementClass, 'isLocalized') && $elementClass::isLocalized()) {
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Element: Site'),
+                'value' => 'element.siteId',
+                'type' => 'selectize',
+                'options' => $this->siteOptions(),
+                'expression' => '((string)($event->sender->siteId ?? \'\'))',
+            ];
+        }
+
+        if (in_array($elementClass, ['craft\\commerce\\elements\\Product', 'craft\\commerce\\elements\\Variant'], true)) {
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Commerce: Product Type'),
+                'value' => 'element.typeId',
+                'type' => 'selectize',
+                'options' => $this->commerceProductTypeOptions(),
+                'expression' => '((string)($event->sender->typeId ?? $event->sender->owner->typeId ?? \'\'))',
+            ];
+        }
+
+        if (in_array($elementClass, [
+            'craft\\commerce\\elements\\Product',
+            'craft\\commerce\\elements\\Variant',
+            'craft\\commerce\\elements\\Donation',
+            'craft\\commerce\\elements\\Order',
+        ], true)) {
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Commerce: Store'),
+                'value' => 'element.storeId',
+                'type' => 'selectize',
+                'options' => $this->commerceStoreOptions(),
+                'expression' => '((string)($event->sender->storeId ?? \'\'))',
+            ];
+        }
+
+        if ($elementClass === 'craft\\commerce\\elements\\Variant') {
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Variant: SKU'),
+                'value' => 'element.sku',
+                'type' => 'text',
+                'expression' => '($event->sender->sku ?? null)',
+                'placeholder' => 'ABC-123',
+            ];
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Variant: Is Default'),
+                'value' => 'element.isDefault',
+                'type' => 'booleanToggle',
+                'expression' => '(bool)($event->sender->isDefault ?? false)',
+            ];
+        }
+
+        if ($elementClass === 'craft\\commerce\\elements\\Donation') {
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Donation: Available for Purchase'),
+                'value' => 'element.availableForPurchase',
+                'type' => 'booleanToggle',
+                'expression' => '(bool)($event->sender->availableForPurchase ?? false)',
+            ];
+        }
+
+        if ($elementClass === 'craft\\commerce\\elements\\Order') {
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Order: Status'),
+                'value' => 'element.orderStatusId',
+                'type' => 'selectize',
+                'options' => $this->commerceOrderStatusOptions(),
+                'expression' => '((string)($event->sender->orderStatusId ?? \'\'))',
+            ];
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Order: Customer'),
+                'value' => 'element.customerId',
+                'type' => 'author',
+                'expression' => '((string)($event->sender->customerId ?? \'\'))',
+            ];
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Order: Email'),
+                'value' => 'element.email',
+                'type' => 'text',
+                'expression' => '($event->sender->email ?? null)',
+                'placeholder' => 'customer@example.com',
+            ];
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Order: Is Completed'),
+                'value' => 'element.isCompleted',
+                'type' => 'booleanToggle',
+                'expression' => '(bool)($event->sender->isCompleted ?? false)',
+            ];
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Order: Is Paid'),
+                'value' => 'element.isPaid',
+                'type' => 'booleanToggle',
+                'expression' => '(bool)($event->sender->isPaid ?? false)',
+            ];
+        }
+
+        if ($elementClass === 'craft\\commerce\\elements\\Subscription') {
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Subscription: User'),
+                'value' => 'element.userId',
+                'type' => 'author',
+                'expression' => '((string)($event->sender->userId ?? \'\'))',
+            ];
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Subscription: Plan'),
+                'value' => 'element.planId',
+                'type' => 'selectize',
+                'options' => $this->commercePlanOptions(),
+                'expression' => '((string)($event->sender->planId ?? \'\'))',
+            ];
+            $fields[] = [
+                'label' => Craft::t('super-mailer', 'Subscription: Gateway'),
+                'value' => 'element.gatewayId',
+                'type' => 'selectize',
+                'options' => $this->commerceGatewayOptions(),
+                'expression' => '((string)($event->sender->gatewayId ?? \'\'))',
+            ];
+            foreach ([
+                'onTrial' => 'On Trial',
+                'isCanceled' => 'Is Canceled',
+                'isSuspended' => 'Is Suspended',
+                'isExpired' => 'Is Expired',
+            ] as $property => $label) {
+                $fields[] = [
+                    'label' => Craft::t('super-mailer', 'Subscription: {label}', ['label' => $label]),
+                    'value' => 'element.' . $property,
+                    'type' => 'booleanToggle',
+                    'expression' => '(bool)($event->sender->' . $property . ' ?? false)',
+                ];
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Builds condition metadata for custom fields attached to an element type's field layouts.
+     *
+     * Multiple layouts can contain the same field, so the result is de-duplicated later by condition
+     * value. Option-based fields expose their configured values to the UI, while text-like fields stay as
+     * normal text inputs.
+     *
+     * @param string $elementClass Element class whose layouts should be inspected.
+     * @return array Custom field filter definitions.
+     */
+    private function fieldLayoutConditionFields(string $elementClass): array
+    {
+        if (isset($this->_fieldLayoutConditionFields[$elementClass])) {
+            return $this->_fieldLayoutConditionFields[$elementClass];
+        }
+
+        $fields = [];
+
+        try {
+            $layouts = Craft::$app->getFields()->getLayoutsByType($elementClass);
+            foreach ($layouts as $layout) {
+                foreach ($layout->getCustomFields() as $field) {
+                    if ($field instanceof FieldInterface) {
+                        $fields[] = $this->customFieldConditionField($field);
+                    }
+                }
+            }
+        } catch (Throwable) {
+        }
+
+        return $this->_fieldLayoutConditionFields[$elementClass] = $fields;
+    }
+
+    /**
+     * Converts a Craft custom field into one condition field definition for the UI and evaluator.
+     *
+     * @param FieldInterface $field Custom field instance from a field layout.
+     * @return array Condition metadata for the field.
+     */
+    private function customFieldConditionField(FieldInterface $field): array
+    {
+        $definition = [
+            'label' => Craft::t('super-mailer', 'Field: {name}', ['name' => $field->name]),
+            'value' => 'field:' . $field->handle,
+            'type' => $this->conditionInputTypeFromField($field),
+            'expression' => '($event->sender->' . $field->handle . ' ?? null)',
+            'placeholder' => $field->handle,
+        ];
+
+        $options = $this->fieldOptions($field);
+        if ($options) {
+            $definition['options'] = $options;
+        }
+
+        return $definition;
+    }
+
+    /**
+     * Determines the best editor control for a custom field type.
+     *
+     * @param FieldInterface $field Custom field being inspected.
+     * @return string Condition value editor type used by JavaScript.
+     */
+    private function conditionInputTypeFromField(FieldInterface $field): string
+    {
+        if (is_a($field, \craft\fields\Lightswitch::class)) {
+            return 'booleanToggle';
+        }
+
+        if (is_a($field, \craft\fields\BaseOptionsField::class)) {
+            return 'selectize';
+        }
+
+        if (is_a($field, \craft\fields\Number::class)) {
+            return 'number';
+        }
+
+        if (is_a($field, \craft\fields\Date::class)) {
+            return 'date';
+        }
+
+        return 'text';
+    }
+
+    /**
+     * Maps reflected PHP scalar types to condition editor controls.
+     *
+     * @param string $typeName Reflected PHP type name.
+     * @return string Condition value editor type.
+     */
+    private function conditionInputTypeFromPhpType(string $typeName): string
+    {
+        return match ($typeName) {
+            'bool' => 'booleanToggle',
+            'int', 'float' => 'number',
+            default => 'text',
+        };
+    }
+
+    /**
+     * Extracts configured options from Craft option fields for selectable condition controls.
+     *
+     * @param FieldInterface $field Custom field being inspected.
+     * @return array Selectable option labels and values.
+     */
+    private function fieldOptions(FieldInterface $field): array
+    {
+        if (!property_exists($field, 'options') || !is_array($field->options)) {
+            return [];
+        }
+
+        $options = [];
+        foreach ($field->options as $option) {
+            if (!is_array($option) || !empty($option['optgroup'])) {
+                continue;
+            }
+
+            $value = (string)($option['value'] ?? '');
+            if ($value === '') {
+                continue;
+            }
+
+            $options[] = [
+                'label' => (string)($option['label'] ?? $value),
+                'value' => $value,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * Checks whether a public element property is too internal or too noisy for condition filtering.
+     *
+     * @param string $property Public element property name.
+     * @return bool Whether the property should be hidden from the condition builder.
+     */
+    private function isIgnoredElementProperty(string $property): bool
+    {
+        $normalized = strtolower($property);
+        if (str_starts_with($normalized, 'default') || str_contains($normalized, 'sort')) {
+            return true;
+        }
+
+        return in_array($property, [
+            'title',
+            'name',
+            'description',
+            'fieldLayoutId',
+            'sectionId',
+            'collapsed',
+            'oldStatus',
+            'deletedWithEntryType',
+            'deletedWithSection',
+            'deletedWithGroup',
+            'placeInStructure',
+            'fieldId',
+            'saveOwnership',
+            'updateSearchIndexForOwner',
+            'layoutId',
+            'templateId',
+            'defaultVariantId',
+            'defaultSku',
+            'defaultBasePrice',
+            'defaultBasePromotionalPrice',
+            'defaultHeight',
+            'defaultLength',
+            'defaultWidth',
+            'defaultWeight',
+            'submitActionEntryId',
+            'submitActionEntrySiteId',
+            'dataRetention',
+            'dataRetentionValue',
+            'userDeletedAction',
+            'fileUploadsAction',
+            'resetClasses',
+            'pageCount',
+            'isApplyingStencil',
+            'incrementalId',
+            'token',
+            'isHidden',
+            'requestId',
+            'ip',
+            'sourceUrl',
+            'idempotencyKey',
+        ], true);
+    }
+
+    /**
+     * Detects Craft Commerce element classes so they can use curated Commerce filters.
+     *
+     * @param string $elementClass Element class being inspected.
+     * @return bool Whether the element belongs to Craft Commerce.
+     */
+    private function isCommerceElementClass(string $elementClass): bool
+    {
+        return str_starts_with($elementClass, 'craft\\commerce\\elements\\');
+    }
+
+    /**
+     * Detects known form definition element classes without requiring optional plugins to be installed.
+     *
+     * @param string $elementClass Element class being inspected.
+     * @return bool Whether the element represents a form definition.
+     */
+    private function isFormElementClass(string $elementClass): bool
+    {
+        return in_array($elementClass, [
+            'verbb\\formie\\elements\\Form',
+        ], true);
+    }
+
+    /**
+     * Detects known submission element classes without requiring optional plugins to be installed.
+     *
+     * @param string $elementClass Element class being inspected.
+     * @return bool Whether the element represents a submitted form record.
+     */
+    private function isSubmissionElementClass(string $elementClass): bool
+    {
+        return in_array($elementClass, [
+            'verbb\\formie\\elements\\Submission',
+            FreeformSubmission::class,
+        ], true);
+    }
+
+    /**
+     * Returns Craft Commerce product type options when Commerce is installed.
+     *
+     * @return array Selectable product type labels and IDs.
+     */
+    private function commerceProductTypeOptions(): array
+    {
+        try {
+            if (!class_exists('craft\\commerce\\Plugin')) {
+                return [];
+            }
+
+            return array_map(
+                static fn($type): array => [
+                    'label' => (string)($type->name ?? $type->handle ?? $type->id),
+                    'value' => (string)$type->id,
+                ],
+                \craft\commerce\Plugin::getInstance()->getProductTypes()->getAllProductTypes()
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Returns Craft Commerce store options when Commerce is installed.
+     *
+     * @return array Selectable store labels and IDs.
+     */
+    private function commerceStoreOptions(): array
+    {
+        try {
+            if (!class_exists('craft\\commerce\\Plugin')) {
+                return [];
+            }
+
+            $stores = \craft\commerce\Plugin::getInstance()->getStores()->getAllStores();
+            return array_map(
+                static fn($store): array => [
+                    'label' => (string)($store->name ?? $store->handle ?? $store->id),
+                    'value' => (string)$store->id,
+                ],
+                is_array($stores) ? $stores : $stores->all()
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Returns Craft Commerce order status options when Commerce is installed.
+     *
+     * @return array Selectable order status labels and IDs.
+     */
+    private function commerceOrderStatusOptions(): array
+    {
+        try {
+            if (!class_exists('craft\\commerce\\Plugin')) {
+                return [];
+            }
+
+            $statuses = [];
+            foreach ($this->commerceStoreOptions() as $store) {
+                $storeStatuses = \craft\commerce\Plugin::getInstance()->getOrderStatuses()->getAllOrderStatuses((int)$store['value']);
+                foreach (is_array($storeStatuses) ? $storeStatuses : $storeStatuses->all() as $status) {
+                    $statuses[$status->id] = [
+                        'label' => (string)($status->name ?? $status->handle ?? $status->id),
+                        'value' => (string)$status->id,
+                    ];
+                }
+            }
+
+            return array_values($statuses);
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Returns Craft Commerce subscription plan options when Commerce is installed.
+     *
+     * @return array Selectable plan labels and IDs.
+     */
+    private function commercePlanOptions(): array
+    {
+        try {
+            if (!class_exists('craft\\commerce\\Plugin') || !method_exists(\craft\commerce\Plugin::getInstance(), 'getPlans')) {
+                return [];
+            }
+
+            return array_map(
+                static fn($plan): array => [
+                    'label' => (string)($plan->name ?? $plan->handle ?? $plan->id),
+                    'value' => (string)$plan->id,
+                ],
+                \craft\commerce\Plugin::getInstance()->getPlans()->getAllPlans()
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Returns Craft Commerce gateway options when Commerce is installed.
+     *
+     * @return array Selectable gateway labels and IDs.
+     */
+    private function commerceGatewayOptions(): array
+    {
+        try {
+            if (!class_exists('craft\\commerce\\Plugin')) {
+                return [];
+            }
+
+            $gateways = \craft\commerce\Plugin::getInstance()->getGateways()->getAllGateways();
+            return array_map(
+                static fn($gateway): array => [
+                    'label' => (string)($gateway->name ?? $gateway->handle ?? $gateway->id),
+                    'value' => (string)$gateway->id,
+                ],
+                is_array($gateways) ? $gateways : $gateways->all()
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Returns configured form handles for form definition condition filters.
+     *
+     * @param string $elementClass Form element class being inspected.
+     * @return array Selectable form handle options.
+     */
+    private function formHandleOptions(string $elementClass): array
+    {
+        return array_map(
+            static fn(array $option): array => [
+                'label' => $option['label'],
+                'value' => $option['handle'],
+            ],
+            $this->formOptions($elementClass)
+        );
+    }
+
+    /**
+     * Returns configured form IDs for submission condition filters.
+     *
+     * @param string $elementClass Submission element class being inspected.
+     * @return array Selectable form ID options.
+     */
+    private function formIdOptions(string $elementClass): array
+    {
+        return array_map(
+            static fn(array $option): array => [
+                'label' => $option['label'],
+                'value' => $option['id'],
+            ],
+            $this->formOptions($elementClass)
+        );
+    }
+
+    /**
+     * Returns known form options for supported form plugins.
+     *
+     * @param string $elementClass Element class that determines which integration to inspect.
+     * @return array Form option arrays containing id, handle, and label.
+     */
+    private function formOptions(string $elementClass): array
+    {
+        if (str_starts_with($elementClass, 'verbb\\formie\\')) {
+            return $this->formieFormOptions();
+        }
+
+        if ($elementClass === FreeformSubmission::class) {
+            return $this->freeformFormOptions();
+        }
+
+        return [];
+    }
+
+    /**
+     * Returns known submission status options for supported form plugins.
+     *
+     * @param string $elementClass Submission element class being inspected.
+     * @return array Selectable submission status options.
+     */
+    private function submissionStatusOptions(string $elementClass): array
+    {
+        if (str_starts_with($elementClass, 'verbb\\formie\\')) {
+            return $this->formieStatusOptions();
+        }
+
+        if ($elementClass === FreeformSubmission::class) {
+            return $this->freeformStatusOptions();
+        }
+
+        return [];
+    }
+
+    /**
+     * Reads Formie form definitions when Formie is installed.
+     *
+     * @return array Form option arrays containing id, handle, and label.
+     */
+    private function formieFormOptions(): array
+    {
+        try {
+            if (!class_exists('verbb\\formie\\Formie')) {
+                return [];
+            }
+
+            $forms = \verbb\formie\Formie::$plugin->getForms()->getAllForms();
+            return array_map(
+                static fn($form): array => [
+                    'id' => (string)$form->id,
+                    'handle' => (string)$form->handle,
+                    'label' => (string)($form->title ?? $form->handle),
+                ],
+                $forms
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Reads Freeform form definitions when Freeform is installed.
+     *
+     * @return array Form option arrays containing id, handle, and label.
+     */
+    private function freeformFormOptions(): array
+    {
+        try {
+            if (!class_exists('Solspace\\Freeform\\Freeform')) {
+                return [];
+            }
+
+            $forms = \Solspace\Freeform\Freeform::getInstance()->forms->getAllForms();
+            return array_map(
+                static fn($form): array => [
+                    'id' => (string)$form->getId(),
+                    'handle' => (string)$form->getHandle(),
+                    'label' => (string)$form->getName(),
+                ],
+                $forms
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Reads Formie submission statuses when Formie is installed.
+     *
+     * @return array Selectable status labels and IDs.
+     */
+    private function formieStatusOptions(): array
+    {
+        try {
+            if (!class_exists('verbb\\formie\\Formie')) {
+                return [];
+            }
+
+            return array_map(
+                static fn($status): array => [
+                    'label' => (string)($status->name ?? $status->handle ?? $status->id),
+                    'value' => (string)$status->id,
+                ],
+                \verbb\formie\Formie::$plugin->getStatuses()->getAllStatuses()
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Reads Freeform submission statuses when Freeform is installed.
+     *
+     * @return array Selectable status labels and IDs.
+     */
+    private function freeformStatusOptions(): array
+    {
+        try {
+            if (!class_exists('Solspace\\Freeform\\Freeform')) {
+                return [];
+            }
+
+            return array_map(
+                static fn($status): array => [
+                    'label' => (string)($status->name ?? $status->handle ?? $status->id),
+                    'value' => (string)$status->id,
+                ],
+                \Solspace\Freeform\Freeform::getInstance()->statuses->getAllStatuses()
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Returns category group options for Category condition filters.
+     *
+     * @return array Selectable category group labels and IDs.
+     */
+    private function categoryGroupOptions(): array
+    {
+        return array_map(
+            static fn($group): array => [
+                'label' => $group->name,
+                'value' => (string)$group->id,
+            ],
+            Craft::$app->getCategories()->getAllGroups()
+        );
+    }
+
+    /**
+     * Returns site options for localized element filters.
+     *
+     * @return array Selectable site labels and IDs.
+     */
+    private function siteOptions(): array
+    {
+        return array_map(
+            static fn($site): array => [
+                'label' => $site->name . ' (' . $site->handle . ')',
+                'value' => (string)$site->id,
+            ],
+            Craft::$app->getSites()->getAllSites()
+        );
+    }
+
+    /**
+     * Returns section options used by Entry condition filters.
+     *
+     * @return array Selectable section labels and handles.
+     */
+    private function sectionOptions(): array
+    {
+        $entries = Craft::$app->getEntries();
+        if (!method_exists($entries, 'getAllSections')) {
+            return [];
+        }
+
+        return array_map(
+            static fn($section): array => [
+                'label' => $section->name,
+                'value' => $section->handle,
+            ],
+            $entries->getAllSections()
+        );
+    }
+
+    /**
+     * Returns entry type options used by Entry condition filters.
+     *
+     * @return array Selectable entry type labels and handles.
+     */
+    private function entryTypeOptions(): array
+    {
+        $entries = Craft::$app->getEntries();
+        if (!method_exists($entries, 'getAllEntryTypes')) {
+            return [];
+        }
+
+        return array_map(
+            static fn($type): array => [
+                'label' => $type->name,
+                'value' => $type->handle,
+            ],
+            $entries->getAllEntryTypes()
+        );
+    }
+
+    /**
+     * Removes duplicate condition field definitions while preserving first-match ordering.
+     *
+     * @param array $fields Condition field definitions.
+     * @return array Unique condition field definitions.
+     */
+    private function uniqueConditionFields(array $fields): array
+    {
+        $unique = [];
+        foreach ($fields as $field) {
+            $value = (string)($field['value'] ?? '');
+            if ($value === '' || isset($unique[$value])) {
+                continue;
+            }
+
+            $unique[$value] = $field;
+        }
+
+        return array_values($unique);
+    }
+
+    /**
+     * Converts a handle or camelCase property name into a readable condition label segment.
+     *
+     * @param string $handle Handle or property name to format.
+     * @return string Human-readable label text.
+     */
+    private function titleFromHandle(string $handle): string
+    {
+        $words = preg_replace('/(?<!^)[A-Z]/', ' $0', $handle) ?: $handle;
+        $words = str_replace(['_', '-'], ' ', $words);
+
+        return ucwords(trim($words));
     }
 
     /**

@@ -220,7 +220,7 @@
 .super-mailer-condition-header,
 .super-mailer-condition-row {
     display: grid;
-    grid-template-columns: minmax(190px, .9fr) 104px minmax(280px, 1.2fr) 40px;
+    grid-template-columns: 24px minmax(190px, .9fr) 104px minmax(280px, 1.2fr) 40px;
     align-items: center;
     column-gap: 12px;
 }
@@ -257,8 +257,27 @@
     background: var(--gray-050);
 }
 
+.super-mailer-condition-row.is-dragging {
+    opacity: .55;
+}
+
 .super-mailer-condition-cell {
     min-width: 0;
+}
+
+.super-mailer-condition-move-cell {
+    display: flex;
+    justify-content: center;
+}
+
+.super-mailer-condition-move {
+    cursor: move;
+    opacity: .55;
+}
+
+.super-mailer-condition-row:hover .super-mailer-condition-move,
+.super-mailer-condition-move:focus {
+    opacity: 1;
 }
 
 .super-mailer-condition-field-cell .select {
@@ -519,8 +538,16 @@
 }
 
 .super-mailer-log-error {
+    margin: 18px 0;
+    padding: 14px;
+    border: 1px solid var(--error-color);
+    border-radius: 6px;
     border-color: var(--error-color);
     background: var(--red-050);
+}
+
+.super-mailer-log-error h3 {
+    margin-top: 0;
 }
 
 .super-mailer-log-error pre,
@@ -562,6 +589,7 @@
 .super-mailer-log-rendered-subject {
     display: grid;
     gap: 6px;
+    margin-bottom: 18px;
     padding: 12px 14px;
     border: 1px solid var(--hairline-color);
     border-radius: 6px;

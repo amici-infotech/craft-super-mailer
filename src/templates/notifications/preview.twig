@@ -110,6 +110,7 @@
                 <thead>
                     <tr>
                         <th>{{ "Condition"|t('super-mailer') }}</th>
+                        <th>{{ "Comparison"|t('super-mailer') }}</th>
                         <th>{{ "Expected"|t('super-mailer') }}</th>
                         <th>{{ "Actual"|t('super-mailer') }}</th>
                         <th>{{ "Result"|t('super-mailer') }}</th>
@@ -119,6 +120,7 @@
                     {% for rule in preview.conditions.rules %}
                         <tr>
                             <td><code>{{ rule.field }}</code></td>
+                            <td>{{ rule.operatorLabel ?? rule.operator }}</td>
                             <td><code>{{ rule.expected|join(', ') }}</code></td>
                             <td><code>{{ rule.actual|json_encode }}</code></td>
                             <td>
@@ -131,7 +133,7 @@
                         </tr>
                     {% else %}
                         <tr>
-                            <td colspan="4"><span class="light">{{ "No condition rows configured."|t('super-mailer') }}</span></td>
+                            <td colspan="5"><span class="light">{{ "No condition rows configured."|t('super-mailer') }}</span></td>
                         </tr>
                     {% endfor %}
                 </tbody>

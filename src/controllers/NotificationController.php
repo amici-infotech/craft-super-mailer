@@ -59,20 +59,22 @@ class NotificationController extends Controller
             $notification->enabledNotification = true;
         }
 
+        $eventsService = Plugin::getInstance()->getEvents();
         $eventValue = $notification->eventClass && $notification->eventName
-            ? Plugin::getInstance()->getEvents()->encodeEventValue(
+            ? $eventsService->encodeEventValue(
                 (string)$notification->eventClass,
                 (string)$notification->eventName,
                 (string)$notification->eventConstant
             )
             : '';
+        $selectedEvent = $eventsService->getEventByValue($eventValue);
 
         return $this->renderTemplate('super-mailer/notifications/_edit', [
             'notification' => $notification,
             'isNew' => !$notification->id,
-            'eventOptions' => Plugin::getInstance()->getEvents()->getSelectOptions(),
+            'eventOptions' => $eventsService->getSelectOptions(),
             'eventValue' => $eventValue,
-            'conditionFieldOptions' => $this->conditionFieldOptions(),
+            'conditionFieldOptions' => $selectedEvent['conditionFields'] ?? $this->conditionFieldOptions(),
             'conditionSuggestions' => $this->conditionSuggestions(),
             'conditionAuthorOptions' => $this->conditionAuthorOptions($notification),
             'recentLogs' => $notification->id ? $this->recentLogs((int)$notification->id) : [],

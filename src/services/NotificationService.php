@@ -170,6 +170,7 @@ class NotificationService extends Component
             $rules[] = [
                 'field' => $field,
                 'operator' => (string)($rule['operator'] ?? 'equals'),
+                'operatorLabel' => $this->conditionOperatorLabel((string)($rule['operator'] ?? 'equals')),
                 'expected' => $expectedValues,
                 'actual' => $actual,
                 'passed' => $this->conditionRulePasses($rule, $context),
@@ -191,6 +192,22 @@ class NotificationService extends Component
                     : !in_array(false, array_column($rules, 'passed'), true))
                 : true,
         ];
+    }
+
+    /**
+     * Returns a human-readable label for a condition operator in preview/debug output.
+     *
+     * @param string $operator Stored condition operator value.
+     * @return string Label shown in the Control Panel.
+     */
+    private function conditionOperatorLabel(string $operator): string
+    {
+        return match ($operator) {
+            'contains' => Craft::t('super-mailer', 'contains'),
+            'notContains' => Craft::t('super-mailer', 'does not contain'),
+            'notEquals' => Craft::t('super-mailer', 'is not'),
+            default => Craft::t('super-mailer', 'is'),
+        };
     }
 
     /**
@@ -249,19 +266,31 @@ class NotificationService extends Component
         $field = (string)($rule['field'] ?? '');
         $actual = $this->conditionValue($field, $context);
         $expectedValues = $this->conditionExpectedValues((string)($rule['value'] ?? ''));
+        $actualValues = $this->conditionActualValues($actual);
 
         if ($field === 'element.status') {
             $actual = $this->normalizeStatusConditionValue($actual);
             $expectedValues = array_values(array_filter(
                 array_map(fn(string $value): ?string => $this->normalizeStatusConditionValue($value), $expectedValues)
             ));
+            $actualValues = $actual !== null ? [(string)$actual] : [];
         }
 
-        if (($rule['operator'] ?? 'equals') === 'contains') {
-            return in_array((string)$actual, $expectedValues, true);
+        $operator = (string)($rule['operator'] ?? 'equals');
+
+        if ($operator === 'contains') {
+            return (bool)array_intersect($actualValues, $expectedValues);
         }
 
-        return (string)$actual === (string)($expectedValues[0] ?? '');
+        if ($operator === 'notContains') {
+            return !array_intersect($actualValues, $expectedValues);
+        }
+
+        $expected = (string)($expectedValues[0] ?? '');
+
+        $matches = in_array($expected, $actualValues, true);
+
+        return $operator === 'notEquals' ? !$matches : $matches;
     }
 
     /**
@@ -283,8 +312,140 @@ class NotificationService extends Component
             'entry.authorId' => $elementObject instanceof Entry ? (string)$elementObject->authorId : ($element['authorId'] ?? null),
             'entry.type.handle' => $elementObject instanceof Entry ? ($elementObject->type->handle ?? null) : null,
             'entry.section.handle' => $elementObject instanceof Entry ? ($elementObject->section->handle ?? null) : null,
-            default => null,
+            default => $this->dynamicConditionValue($field, $context, $element, $elementObject),
         };
+    }
+
+    /**
+     * Reads dynamic condition values generated from event properties, element properties, or field layouts.
+     *
+     * Event values are read from normalized scalar event data, custom fields prefer serialized field
+     * context, and element properties fall back to the live rehydrated element when available.
+     *
+     * @param string $field Dynamic condition field identifier.
+     * @param array $context Normalized event context.
+     * @param array $element Serialized element context.
+     * @param Element|null $elementObject Rehydrated live element.
+     * @return mixed Dynamic value used for condition comparison.
+     */
+    private function dynamicConditionValue(string $field, array $context, array $element, ?Element $elementObject): mixed
+    {
+        if (str_starts_with($field, 'event.')) {
+            $property = substr($field, 6);
+            return $context['data'][$property] ?? null;
+        }
+
+        if (str_starts_with($field, 'field:')) {
+            $handle = substr($field, 6);
+            if (array_key_exists($handle, $element['fields'] ?? [])) {
+                return $element['fields'][$handle];
+            }
+
+            return $this->elementPropertyValue($elementObject, $handle);
+        }
+
+        if (str_starts_with($field, 'element.')) {
+            $property = substr($field, 8);
+            if (array_key_exists($property, $element)) {
+                return $element[$property];
+            }
+
+            if (array_key_exists($property, $element['attributes'] ?? [])) {
+                return $element['attributes'][$property];
+            }
+
+            return $this->elementPropertyValue($elementObject, $property);
+        }
+
+        return null;
+    }
+
+    /**
+     * Reads a public or magic property from an element without letting optional properties break sends.
+     *
+     * @param Element|null $element Element to inspect.
+     * @param string $property Property or field handle to read.
+     * @return mixed Property value or null when unavailable.
+     */
+    private function elementPropertyValue(?Element $element, string $property): mixed
+    {
+        if (!$element) {
+            return null;
+        }
+
+        try {
+            if ($property === 'typeId') {
+                foreach (['getOwner', 'getProduct'] as $method) {
+                    if (method_exists($element, $method)) {
+                        $owner = $element->{$method}();
+                        if ($owner instanceof Element && isset($owner->typeId)) {
+                            return $owner->typeId;
+                        }
+                    }
+                }
+            }
+
+            return $element->{$property} ?? null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Converts scalar and array condition values into normalized string tokens for comparison.
+     *
+     * @param mixed $actual Raw value from event context.
+     * @return array String comparison values.
+     */
+    private function conditionActualValues(mixed $actual): array
+    {
+        if ($actual === null) {
+            return [];
+        }
+
+        if (is_bool($actual)) {
+            return [$actual ? 'true' : 'false'];
+        }
+
+        if (is_scalar($actual)) {
+            return [(string)$actual];
+        }
+
+        if ($actual instanceof \DateTimeInterface) {
+            return [$actual->format('c')];
+        }
+
+        if ($actual instanceof \Traversable) {
+            $values = [];
+            foreach ($actual as $value) {
+                foreach ($this->conditionActualValues($value) as $normalizedValue) {
+                    $values[] = $normalizedValue;
+                }
+            }
+
+            return array_values(array_unique($values));
+        }
+
+        if (is_array($actual)) {
+            $values = [];
+            foreach ($actual as $value) {
+                foreach ($this->conditionActualValues($value) as $normalizedValue) {
+                    $values[] = $normalizedValue;
+                }
+            }
+
+            return array_values(array_unique($values));
+        }
+
+        if (is_object($actual) && property_exists($actual, 'value') && $actual->value !== null) {
+            return [(string)$actual->value];
+        }
+
+        if ($actual instanceof \Stringable) {
+            return [(string)$actual];
+        }
+
+        return [];
     }
 
     /**

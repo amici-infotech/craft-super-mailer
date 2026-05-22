@@ -135,6 +135,7 @@
         <div class="input">
             <div class="super-mailer-condition-builder">
                 <div class="super-mailer-condition-header" aria-hidden="true">
+                    <div></div>
                     <div>{{ "Condition"|t('super-mailer') }}</div>
                     <div>{{ "Comparison"|t('super-mailer') }}</div>
                     <div>{{ "Value"|t('super-mailer') }}</div>
@@ -143,6 +144,9 @@
                 <div id="conditionRulesTable" class="super-mailer-condition-list">
                     {% for rule in notification.normalizedConditionRules() %}
                         <div class="super-mailer-condition-row" data-condition-row>
+                            <div class="super-mailer-condition-cell super-mailer-condition-move-cell">
+                                <button type="button" class="move icon super-mailer-condition-move" data-move-condition title="{{ 'Reorder'|t('app') }}" aria-label="{{ 'Reorder'|t('app') }}"></button>
+                            </div>
                             <div class="super-mailer-condition-cell super-mailer-condition-field-cell">
                                 {{ forms.select({
                                     name: "conditionRules[#{loop.index0}][field]",
