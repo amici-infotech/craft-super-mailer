@@ -14,6 +14,7 @@
     dateFrom: filters.dateFrom ?? '',
     dateTo: filters.dateTo ?? '',
 }|filter(value => value is not empty) %}
+{% set currentLogUrl = craft.app.request.pathInfo ~ (craft.app.request.queryString ? '?' ~ craft.app.request.queryString : '') %}
 
 {% block actionButton %}
     {% if logs %}
@@ -94,7 +95,7 @@
 
     {% if logs %}
         <form method="post" accept-charset="UTF-8" id="super-mailer-log-bulk-form">
-            {{ redirectInput(craft.app.request.fullPath) }}
+            {{ redirectInput(currentLogUrl) }}
             {{ csrfInput() }}
         </form>
 
@@ -159,14 +160,14 @@
                             <div class="buttons">
                                 <form method="post" accept-charset="UTF-8" style="display:inline-block;" onsubmit="return confirm('{{ 'Queue this email for resend?'|t('super-mailer')|e('js') }}');">
                                     {{ actionInput('super-mailer/logs/resend') }}
-                                    {{ redirectInput(craft.app.request.fullPath) }}
+                                    {{ redirectInput(currentLogUrl) }}
                                     {{ csrfInput() }}
                                     {{ hiddenInput('singleLogId', log.id) }}
                                     <button type="submit" class="btn small">{{ "Resend"|t('super-mailer') }}</button>
                                 </form>
                                 <form method="post" accept-charset="UTF-8" style="display:inline-block;" onsubmit="return confirm('{{ 'Delete this email log?'|t('super-mailer')|e('js') }}');">
                                     {{ actionInput('super-mailer/logs/delete') }}
-                                    {{ redirectInput(craft.app.request.fullPath) }}
+                                    {{ redirectInput(currentLogUrl) }}
                                     {{ csrfInput() }}
                                     {{ hiddenInput('singleLogId', log.id) }}
                                     <button type="submit" class="btn small">{{ "Delete"|t('app') }}</button>
