@@ -43,6 +43,33 @@ All notable changes to this project will be documented in this file.
 - Added entry-only filtering for entry section and entry type condition fields.
 - Added normalized status comparisons for enabled/disabled checks across different element types.
 
+### Added - Dynamic Conditions
+- Added event-aware condition field metadata so the condition table changes based on the selected event and primary element type.
+- Added automatic condition filters from supported element field layouts, including option lists for dropdown, radio, checkbox, and multi-select fields.
+- Added selector-style options for practical element filters such as sites, entry sections, entry types, category groups, form handles, submission forms, submission statuses, Commerce product types, Commerce stores, order statuses, subscription plans, and gateways.
+- Added curated Commerce condition filters for products, variants, orders, donations, and subscriptions.
+- Added `is not` and `does not contain` operators for scalar and multi-value condition rows.
+- Added Craft-style drag handles for reordering condition rows.
+- Added operator labels to the preview condition debug table.
+
+### Changed - Dynamic Conditions
+- Replaced the previous static condition field list with selected-event condition metadata.
+- Status filters are only shown for element types that support statuses.
+- Entry section and entry type filters are only shown for Entry events.
+- Category events now expose a category group selector instead of raw internal group data.
+- Form definition events expose only useful form handle filters instead of administrative configuration fields.
+- Submission events expose focused filters for status, form, and user while hiding request/tracking/internal fields.
+- Commerce events expose focused business filters and hide internal/default/calculated properties.
+- Toggle-style condition rows no longer show a comparison dropdown because the switch itself represents the expected value.
+- Preview render error blocks now have clearer spacing from the rendered subject and body sections.
+
+### Fixed - Dynamic Conditions
+- Fixed saved dynamic condition rows, such as category group filters, being replaced by the first static condition option after reload.
+- Fixed condition debug output for negated comparisons by showing the comparison operator.
+- Fixed dynamic element condition evaluation for `event.*`, `element.*`, and custom `field:*` handles.
+- Fixed multi-value condition evaluation so `contains` and `does not contain` work with scalar arrays and option-field data.
+- Fixed Commerce variant product type checks by resolving the variant owner/product where needed.
+
 ### Added - Preview and Testing
 - Added dynamic event preview with real matching elements where possible.
 - Added support for previewing a specific element with the `id` query parameter.

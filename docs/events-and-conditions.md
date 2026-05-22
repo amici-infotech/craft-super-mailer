@@ -37,14 +37,38 @@ Condition rows are evaluated before a queue job is pushed.
 
 ![Notification Form Conditions](images/sm-notificaiton-form-conditions.png)
 
-Available fields:
+Available fields are generated from the selected event and element type. Super Mailer intentionally shows practical filters and hides noisy internal properties.
 
-- **Status**: enabled/disabled element state.
-- **Is New**: whether Super Mailer considers the event a new element/content event.
-- **Site ID**: element site ID.
-- **Section Handle**: entry section handle; only shown for Entry events.
-- **Entry Type Handle**: entry type handle; only shown for Entry events.
-- **Author**: one or more Craft users.
+Common fields include:
+
+- **Event: Is New**: whether Super Mailer considers the event a new element/content event.
+- **Element: Status**: enabled/disabled element state, only when the element type supports statuses.
+- **Element: Site**: a selectable list of Craft sites, only when the element type is localized.
+- **Entry: Section** and **Entry: Entry Type**: selectable Entry filters, only for Entry events.
+- **Entry: Author**: one or more Craft users.
+- **Category: Group**: selectable category groups for Category events.
+- **Field: {Field Name}**: custom field layout filters where the field type can be compared safely.
+
+For option-style custom fields, such as dropdowns, radio buttons, checkboxes, and multi-selects, Super Mailer uses the configured field options so authors can choose values instead of typing them.
+
+Supported third-party and Commerce-style element events may expose curated filters such as form handle, submission form/status/user, product type, store, order status, customer, plan, gateway, and simple boolean state fields.
+
+Super Mailer hides fields that are usually not meaningful filters, including operational, sorting, default/calculated, request tracking, and internal configuration values.
+
+## Comparisons
+
+Condition rows support:
+
+- **is**
+- **is not**
+- **contains**
+- **does not contain**
+
+Selector-style fields use `contains` and `does not contain` so multiple selected values can be compared. Text and number fields use `is` and `is not`. Toggle fields do not show a comparison dropdown because the switch itself defines the expected value.
+
+## Row Ordering
+
+Use the move handle on the left side of a condition row to drag conditions into the order you prefer. Reordering is mostly for readability; matching is still controlled by **All conditions must match** or **Any condition can match**.
 
 ## Match Mode
 
@@ -54,7 +78,7 @@ Use **Any condition can match** when at least one row can pass.
 
 ## Author Conditions
 
-Author conditions can include multiple users. The saved value is a comma-separated ID list and the condition uses `contains`.
+Author conditions can include multiple users. The saved value is a comma-separated ID list and the condition uses `contains` or `does not contain`.
 
 ## Status Conditions
 
@@ -93,6 +117,7 @@ The preview page includes a condition debug table showing:
 ![Condition Debug](images/sm-notificaiton-form-conditions.png)
 
 - Field.
+- Comparison operator.
 - Expected value.
 - Actual value.
 - Pass/fail result.

@@ -61,6 +61,18 @@ Availability depends on the selected event and element type. Do not assume every
 
 Raw context is the serialized queue payload. It is useful for debugging logs and resends, but templates should generally use `event`.
 
+## Condition Debug
+
+Condition debug shows each configured condition row with:
+
+- Field.
+- Comparison.
+- Expected value.
+- Actual value.
+- Pass/fail result.
+
+This makes negated rows easier to read, for example `does not contain` can pass when the actual value is not in the expected list.
+
 ## Test Send
 
 Use **Test Send** to send the currently previewed notification to one email address.

@@ -39,6 +39,21 @@ The selected event controls which event is registered and what context will be a
 
 ![After Select Event](images/sm-notification-after-select-events.png)
 
+## Conditions
+
+The condition table changes based on the selected event. Super Mailer shows filters that are useful for that event and hides internal values that are unlikely to be valid notification rules.
+
+Depending on the selected event, condition rows may include:
+
+- Element status, site, and new-event checks.
+- Entry section, entry type, and author selectors.
+- Category group selectors.
+- Custom field layout filters with configured field options.
+- Submission form, status, and user filters.
+- Commerce product type, store, order status, customer, plan, gateway, and simple boolean filters.
+
+Rows support `is`, `is not`, `contains`, and `does not contain` where appropriate. Toggle rows use a switch instead of a comparison dropdown. Use the move handle to reorder rows for readability.
+
 ## Recipients
 
 Recipient fields accept comma-separated email addresses:

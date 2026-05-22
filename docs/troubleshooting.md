@@ -52,8 +52,10 @@ Use preview's **Condition Debug** section.
 Common issues:
 
 - Entry status uses enabled/disabled logic, not only Craft's `live` value.
-- Author conditions store user IDs.
+- Author and customer conditions store user IDs.
 - Site ID must match the element's site ID.
+- Selector conditions store IDs or handles depending on the filter. Check the **Expected** and **Actual** columns in condition debug.
+- Negated rows use the **Comparison** column, such as `is not` or `does not contain`, to explain why a rule passed.
 - PHP conditions only run against the actual event object when the event fires.
 
 ## New Entry Condition Does Not Send

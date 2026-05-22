@@ -42,16 +42,11 @@ In templates, you can use:
 
 Conditions run before queueing. A notification queues only when its condition rows and PHP condition pass.
 
-Supported condition rows include:
+Condition rows are generated from the selected event. Super Mailer shows practical filters for the event's element type, such as status, site, Entry section/type/author, category group, custom field layout values, submission form/status/user, and Commerce product/store/order filters when available.
 
-- Element status.
-- Whether the event is new.
-- Site ID.
-- Entry section handle.
-- Entry type handle.
-- Entry author.
+Option-style fields use their configured options, and multi-value rows support both `contains` and `does not contain`. Toggle fields use a switch without a separate comparison selector.
 
-Condition rows can match all rules or any rule.
+Condition rows can be reordered for readability and can match all rules or any rule.
 
 ## Queue Jobs
 

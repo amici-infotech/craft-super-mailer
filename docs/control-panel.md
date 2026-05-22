@@ -26,7 +26,7 @@ The notification editor includes:
 - Event picker with searchable event class/constant/name.
 - Example listener code.
 - Available callback variables.
-- Condition match mode and condition rows.
+- Event-aware condition match mode and condition rows.
 - Optional PHP condition.
 - Recipient fields.
 - Sender and reply-to fields.
@@ -51,6 +51,8 @@ The preview page shows:
 - Raw queue context.
 
 Use `?id=123` on the preview URL to preview against a specific matching element ID.
+
+Condition rows in the editor are generated from the selected event. They can include selectors for known options, user pickers, custom field layout options, toggles, and drag handles for reordering rows.
 
 ## Logs
 

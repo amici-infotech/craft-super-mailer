@@ -8,7 +8,8 @@ Super Mailer adds event-driven email notifications to Craft CMS. Create Control 
 - Choose from Craft element lifecycle events and supported third-party plugin events such as form submission events.
 - Send HTML and/or plain text templates from the site templates folder.
 - Use Twig in subjects, recipients, sender fields, and email templates.
-- Add condition rows and optional PHP expressions before a notification queues.
+- Add event-aware condition rows and optional PHP expressions before a notification queues.
+- Use dynamic condition selectors for field layout options, users, sites, categories, forms, submissions, and Commerce-style element metadata where available.
 - Preview event context, rendered recipients, subject, body, and condition results before sending.
 - Send test emails from the preview screen.
 - Queue delivery with detailed success and failure logs.
