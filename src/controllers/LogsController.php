@@ -27,10 +27,49 @@ class LogsController extends Controller
     {
         $this->requirePermission('super-mailer:view-notifications');
 
-        $logs = (new Query())
-            ->from(EmailLogRecord::tableName())
+        $request = Craft::$app->getRequest();
+        $filters = [
+            'status' => (string)$request->getQueryParam('status', ''),
+            'notificationId' => (string)$request->getQueryParam('notificationId', ''),
+            'dateFrom' => $this->dateFilterValue($request->getQueryParam('dateFrom', '')),
+            'dateTo' => $this->dateFilterValue($request->getQueryParam('dateTo', '')),
+        ];
+        $limit = 50;
+        $currentPage = max(1, (int)$request->getQueryParam('page', 1));
+        $query = (new Query())->from(EmailLogRecord::tableName());
+
+        if (in_array($filters['status'], [EmailLogRecord::STATUS_SUCCESS, EmailLogRecord::STATUS_FAILED], true)) {
+            $query->andWhere(['status' => $filters['status']]);
+        }
+
+        if ($filters['notificationId'] !== '' && ctype_digit($filters['notificationId'])) {
+            $query->andWhere(['notificationId' => (int)$filters['notificationId']]);
+        }
+
+        if ($filters['dateFrom'] !== '') {
+            try {
+                $query->andWhere(['>=', 'dateCreated', (new \DateTimeImmutable($filters['dateFrom'] . ' 00:00:00'))->format('Y-m-d H:i:s')]);
+            } catch (\Throwable) {
+                $filters['dateFrom'] = '';
+            }
+        }
+
+        if ($filters['dateTo'] !== '') {
+            try {
+                $query->andWhere(['<=', 'dateCreated', (new \DateTimeImmutable($filters['dateTo'] . ' 23:59:59'))->format('Y-m-d H:i:s')]);
+            } catch (\Throwable) {
+                $filters['dateTo'] = '';
+            }
+        }
+
+        $total = (int)(clone $query)->count();
+        $totalPages = max(1, (int)ceil($total / $limit));
+        $currentPage = min($currentPage, $totalPages);
+
+        $logs = $query
             ->orderBy(['dateCreated' => SORT_DESC, 'id' => SORT_DESC])
-            ->limit(100)
+            ->limit($limit)
+            ->offset(($currentPage - 1) * $limit)
             ->all();
 
         foreach ($logs as &$log) {
@@ -42,6 +81,14 @@ class LogsController extends Controller
 
         return $this->renderTemplate('super-mailer/logs/index', [
             'logs' => $logs,
+            'filters' => $filters,
+            'notificationOptions' => $this->notificationOptions(),
+            'pagination' => [
+                'currentPage' => $currentPage,
+                'totalPages' => $totalPages,
+                'total' => $total,
+                'limit' => $limit,
+            ],
         ]);
     }
 
@@ -183,6 +230,21 @@ class LogsController extends Controller
     }
 
     /**
+     * Normalizes a logs date filter from Craft's date field query structure.
+     *
+     * @param mixed $value Raw query parameter value.
+     * @return string Date string suitable for display and query parsing.
+     */
+    private function dateFilterValue(mixed $value): string
+    {
+        if (is_array($value)) {
+            return trim((string)($value['date'] ?? ''));
+        }
+
+        return trim((string)$value);
+    }
+
+    /**
      * Combines bulk and single log ID POST values into one ID list.
      *
      * @return array Return value produced by this method.
@@ -198,5 +260,40 @@ class LogsController extends Controller
         }
 
         return $ids;
+    }
+
+    /**
+     * Builds notification filter options from distinct notification IDs present in the log table.
+     *
+     * @return array Select options for the logs index notification filter.
+     */
+    private function notificationOptions(): array
+    {
+        $rows = (new Query())
+            ->select(['notificationId', 'notificationTitle'])
+            ->from(EmailLogRecord::tableName())
+            ->where(['not', ['notificationId' => null]])
+            ->groupBy(['notificationId', 'notificationTitle'])
+            ->orderBy(['notificationTitle' => SORT_ASC])
+            ->all();
+
+        $options = [
+            ['label' => Craft::t('super-mailer', 'All notifications'), 'value' => ''],
+        ];
+
+        foreach ($rows as $row) {
+            $id = (int)($row['notificationId'] ?? 0);
+            if (!$id) {
+                continue;
+            }
+
+            $title = trim((string)($row['notificationTitle'] ?? ''));
+            $options[] = [
+                'label' => $title !== '' ? $title : Craft::t('super-mailer', 'Notification #{id}', ['id' => $id]),
+                'value' => (string)$id,
+            ];
+        }
+
+        return $options;
     }
 }

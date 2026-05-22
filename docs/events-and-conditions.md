@@ -49,7 +49,13 @@ Common fields include:
 - **Category: Group**: selectable category groups for Category events.
 - **Field: {Field Name}**: custom field layout filters where the field type can be compared safely.
 
-For option-style custom fields, such as dropdowns, radio buttons, checkboxes, and multi-selects, Super Mailer uses the configured field options so authors can choose values instead of typing them.
+Custom field conditions are intentionally limited to field types that can be compared reliably:
+
+- Lightswitch fields use a toggle.
+- Option-style fields, such as dropdowns, radio buttons, checkboxes, and multi-selects, use configured field options.
+- Country fields use Craft's country list.
+- Email and plain text fields use text comparison.
+- Money and number fields use numeric comparison.
 
 Supported third-party and Commerce-style element events may expose curated filters such as form handle, submission form/status/user, product type, store, order status, customer, plan, gateway, and simple boolean state fields.
 
@@ -63,8 +69,14 @@ Condition rows support:
 - **is not**
 - **contains**
 - **does not contain**
+- **greater than**
+- **less than**
+- **greater than or equal to**
+- **less than or equal to**
+- **is empty**
+- **is not empty**
 
-Selector-style fields use `contains` and `does not contain` so multiple selected values can be compared. Text and number fields use `is` and `is not`. Toggle fields do not show a comparison dropdown because the switch itself defines the expected value.
+Selector-style fields use `contains` and `does not contain` so multiple selected values can be compared. Text fields use `is`, `is not`, `is empty`, and `is not empty`. Number and money fields also support numeric greater/less comparisons. Toggle fields do not show a comparison dropdown because the switch itself defines the expected value. Empty comparisons hide the value field because no expected value is needed.
 
 ## Row Ordering
 

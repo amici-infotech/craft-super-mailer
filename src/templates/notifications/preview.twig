@@ -121,8 +121,8 @@
                         <tr>
                             <td><code>{{ rule.field }}</code></td>
                             <td>{{ rule.operatorLabel ?? rule.operator }}</td>
-                            <td><code>{{ rule.expected|join(', ') }}</code></td>
-                            <td><code>{{ rule.actual|json_encode }}</code></td>
+                            <td><code>{{ rule.expectedDisplay ?? rule.expected|join(', ') }}</code></td>
+                            <td><code>{{ rule.actualDisplay ?? rule.actual|json_encode }}</code></td>
                             <td>
                                 {% if rule.passed %}
                                     <span class="status enabled"></span>{{ "Passed"|t('super-mailer') }}

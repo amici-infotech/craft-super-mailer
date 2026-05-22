@@ -384,6 +384,10 @@
 
         var comparisonOperator = rule.operator === 'notEquals' ? '!=' : '==';
 
+        if (rule.operator === 'empty' || rule.operator === 'notEmpty') {
+            return (rule.operator === 'notEmpty' ? '!' : '') + 'empty(' + fieldExpression + ')';
+        }
+
         if (rule.field === 'element.status') {
             return fieldExpression + ' ' + comparisonOperator + " '" + normalizeStatusValue(value || 'enabled') + "'";
         }
@@ -394,6 +398,17 @@
 
         if (rule.operator === 'contains' || rule.operator === 'notContains') {
             return (rule.operator === 'notContains' ? '!' : '') + 'in_array(' + fieldExpression + ', ' + phpArray(parseTokenValues(rule.value)) + ', true)';
+        }
+
+        if (['greaterThan', 'lessThan', 'greaterThanOrEquals', 'lessThanOrEquals'].indexOf(rule.operator) !== -1) {
+            var numericOperator = {
+                greaterThan: '>',
+                lessThan: '<',
+                greaterThanOrEquals: '>=',
+                lessThanOrEquals: '<='
+            }[rule.operator];
+
+            return fieldExpression + ' ' + numericOperator + ' ' + (rule.value || '0');
         }
 
         return fieldExpression + ' ' + comparisonOperator + " '" + value + "'";
@@ -504,15 +519,33 @@
      * Renders the operator selector for scalar and multi-value condition controls.
      */
     function renderOperator(name, value, valueType) {
-        var options = valueType === 'selectize' || valueType === 'author'
-            ? [
+        var options;
+        if (valueType === 'selectize' || valueType === 'author') {
+            options = [
                 {label: 'contains', value: 'contains'},
-                {label: 'does not contain', value: 'notContains'}
-            ]
-            : [
-                {label: 'is', value: 'equals'},
-                {label: 'is not', value: 'notEquals'}
+                {label: 'does not contain', value: 'notContains'},
+                {label: 'is empty', value: 'empty'},
+                {label: 'is not empty', value: 'notEmpty'}
             ];
+        } else if (valueType === 'number') {
+            options = [
+                {label: 'is', value: 'equals'},
+                {label: 'is not', value: 'notEquals'},
+                {label: 'greater than', value: 'greaterThan'},
+                {label: 'less than', value: 'lessThan'},
+                {label: 'greater than or equal to', value: 'greaterThanOrEquals'},
+                {label: 'less than or equal to', value: 'lessThanOrEquals'},
+                {label: 'is empty', value: 'empty'},
+                {label: 'is not empty', value: 'notEmpty'}
+            ];
+        } else {
+            options = [
+                {label: 'is', value: 'equals'},
+                {label: 'is not', value: 'notEquals'},
+                {label: 'is empty', value: 'empty'},
+                {label: 'is not empty', value: 'notEmpty'}
+            ];
+        }
 
         var selectedValue = options.some(function(option) {
             return option.value === value;
@@ -523,6 +556,13 @@
                 return '<option value="' + escapeHtml(option.value) + '"' + (option.value === selectedValue ? ' selected' : '') + '>' + escapeHtml(option.label) + '</option>';
             }).join('') +
             '</select></div>';
+    }
+
+    /**
+     * Determines whether the selected comparison operator needs a value editor.
+     */
+    function operatorUsesValue(operator) {
+        return operator !== 'empty' && operator !== 'notEmpty';
     }
 
     /**
@@ -782,8 +822,15 @@
         var valueName = 'conditionRules[' + index + '][value]';
         var valueType = conditionValueType(field.value);
         var operatorName = 'conditionRules[' + index + '][operator]';
+        var normalizedOperator;
 
         operatorCell.innerHTML = renderOperator(operatorName, currentOperator, valueType);
+        normalizedOperator = operatorCell.querySelector('[name$="[operator]"]') ? operatorCell.querySelector('[name$="[operator]"]').value : 'equals';
+
+        if (!operatorUsesValue(normalizedOperator)) {
+            valueCell.innerHTML = '<input type="hidden" name="' + escapeHtml(valueName) + '" value=""><span class="light">No value needed</span>';
+            return;
+        }
 
         if (valueType === 'toggle') {
             operatorCell.innerHTML = '<input type="hidden" name="' + escapeHtml(operatorName) + '" value="equals">';
@@ -862,6 +909,9 @@
             }
             if (event.target.name && event.target.name.indexOf('[field]') !== -1) {
                 syncConditionRow(row, true);
+            }
+            if (event.target.name && event.target.name.indexOf('[operator]') !== -1) {
+                syncConditionRow(row, false);
             }
             updateCodePreview();
         });

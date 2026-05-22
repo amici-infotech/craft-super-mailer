@@ -1033,7 +1033,10 @@ class EventRegistryService extends Component
             foreach ($layouts as $layout) {
                 foreach ($layout->getCustomFields() as $field) {
                     if ($field instanceof FieldInterface) {
-                        $fields[] = $this->customFieldConditionField($field);
+                        $conditionField = $this->customFieldConditionField($field);
+                        if ($conditionField !== null) {
+                            $fields[] = $conditionField;
+                        }
                     }
                 }
             }
@@ -1047,19 +1050,24 @@ class EventRegistryService extends Component
      * Converts a Craft custom field into one condition field definition for the UI and evaluator.
      *
      * @param FieldInterface $field Custom field instance from a field layout.
-     * @return array Condition metadata for the field.
+     * @return array|null Condition metadata for the field, or null when the field cannot be compared safely.
      */
-    private function customFieldConditionField(FieldInterface $field): array
+    private function customFieldConditionField(FieldInterface $field): ?array
     {
+        $type = $this->conditionInputTypeFromField($field);
+        if ($type === null) {
+            return null;
+        }
+
         $definition = [
             'label' => Craft::t('super-mailer', 'Field: {name}', ['name' => $field->name]),
             'value' => 'field:' . $field->handle,
-            'type' => $this->conditionInputTypeFromField($field),
+            'type' => $type,
             'expression' => '($event->sender->' . $field->handle . ' ?? null)',
             'placeholder' => $field->handle,
         ];
 
-        $options = $this->fieldOptions($field);
+        $options = is_a($field, \craft\fields\Country::class) ? $this->countryOptions() : $this->fieldOptions($field);
         if ($options) {
             $definition['options'] = $options;
         }
@@ -1071,27 +1079,27 @@ class EventRegistryService extends Component
      * Determines the best editor control for a custom field type.
      *
      * @param FieldInterface $field Custom field being inspected.
-     * @return string Condition value editor type used by JavaScript.
+     * @return string|null Condition value editor type used by JavaScript, or null if unsupported.
      */
-    private function conditionInputTypeFromField(FieldInterface $field): string
+    private function conditionInputTypeFromField(FieldInterface $field): ?string
     {
         if (is_a($field, \craft\fields\Lightswitch::class)) {
             return 'booleanToggle';
         }
 
-        if (is_a($field, \craft\fields\BaseOptionsField::class)) {
+        if (is_a($field, \craft\fields\BaseOptionsField::class) || is_a($field, \craft\fields\Country::class)) {
             return 'selectize';
         }
 
-        if (is_a($field, \craft\fields\Number::class)) {
+        if (is_a($field, \craft\fields\Number::class) || is_a($field, \craft\fields\Money::class)) {
             return 'number';
         }
 
-        if (is_a($field, \craft\fields\Date::class)) {
-            return 'date';
+        if (is_a($field, \craft\fields\Email::class) || is_a($field, \craft\fields\PlainText::class)) {
+            return 'text';
         }
 
-        return 'text';
+        return null;
     }
 
     /**
@@ -1139,6 +1147,35 @@ class EventRegistryService extends Component
         }
 
         return $options;
+    }
+
+    /**
+     * Returns Craft country options for Country field condition filters.
+     *
+     * @return array Selectable country labels and country codes.
+     */
+    private function countryOptions(): array
+    {
+        try {
+            $countries = Craft::$app->getAddresses()->getCountryList(Craft::$app->language);
+            $options = [];
+
+            foreach ($countries as $code => $name) {
+                $code = (string)$code;
+                if ($code === '' || $code === '__blank__') {
+                    continue;
+                }
+
+                $options[] = [
+                    'label' => (string)$name,
+                    'value' => $code,
+                ];
+            }
+
+            return $options;
+        } catch (Throwable) {
+            return [];
+        }
     }
 
     /**

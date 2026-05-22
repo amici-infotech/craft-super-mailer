@@ -1,4 +1,5 @@
 {% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
 
 {% set title = "Email Logs"|t('super-mailer') %}
 {% set selectedNavItem = 'super-mailer' %}
@@ -6,6 +7,13 @@
 {% set crumbs = [
     { label: "Super Mailer"|t('super-mailer'), url: cpUrl('super-mailer/notifications') },
 ] %}
+{% do view.registerAssetBundle('amici\\SuperMailer\\assetbundles\\NotificationEditAsset') %}
+{% set filterParams = {
+    status: filters.status ?? '',
+    notificationId: filters.notificationId ?? '',
+    dateFrom: filters.dateFrom ?? '',
+    dateTo: filters.dateTo ?? '',
+}|filter(value => value is not empty) %}
 
 {% block actionButton %}
     {% if logs %}
@@ -19,9 +27,74 @@
 {% endblock %}
 
 {% block content %}
+    <form method="get" class="super-mailer-log-filters">
+        <div class="field">
+            <div class="heading"><label for="status">{{ "Status"|t('super-mailer') }}</label></div>
+            <div class="input">
+                <div class="select">
+                    <select id="status" name="status">
+                        <option value="">{{ "All statuses"|t('super-mailer') }}</option>
+                        <option value="success"{{ (filters.status ?? '') == 'success' ? ' selected' }}>{{ "Success"|t('super-mailer') }}</option>
+                        <option value="failed"{{ (filters.status ?? '') == 'failed' ? ' selected' }}>{{ "Failed"|t('super-mailer') }}</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+            <div class="heading"><label for="notificationId">{{ "Notification"|t('super-mailer') }}</label></div>
+            <div class="input">
+                <div class="select">
+                    <select id="notificationId" name="notificationId">
+                        {% for option in notificationOptions %}
+                            <option value="{{ option.value }}"{{ (filters.notificationId ?? '') == option.value ? ' selected' }}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+            <div class="heading"><label for="dateFrom">{{ "From"|t('app') }}</label></div>
+            <div class="input">
+                {% include "_includes/forms/date" with {
+                    id: 'dateFrom',
+                    name: 'dateFrom',
+                    value: filters.dateFrom ?? '',
+                    hasOuterContainer: true,
+                } only %}
+            </div>
+        </div>
+
+        <div class="field">
+            <div class="heading"><label for="dateTo">{{ "To"|t('app') }}</label></div>
+            <div class="input">
+                {% include "_includes/forms/date" with {
+                    id: 'dateTo',
+                    name: 'dateTo',
+                    value: filters.dateTo ?? '',
+                    hasOuterContainer: true,
+                } only %}
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button type="submit" class="btn submit">{{ "Filter"|t('app') }}</button>
+            <a class="btn" href="{{ cpUrl('super-mailer/logs') }}">{{ "Clear"|t('app') }}</a>
+        </div>
+    </form>
+
+    <p class="light">
+        {{ "{total} log(s) found. Showing page {page} of {pages}."|t('super-mailer', {
+            total: pagination.total,
+            page: pagination.currentPage,
+            pages: pagination.totalPages,
+        }) }}
+    </p>
+
     {% if logs %}
         <form method="post" accept-charset="UTF-8" id="super-mailer-log-bulk-form">
-            {{ redirectInput('super-mailer/logs') }}
+            {{ redirectInput(craft.app.request.fullPath) }}
             {{ csrfInput() }}
         </form>
 
@@ -38,7 +111,7 @@
                     <th>{{ "Subject"|t('super-mailer') }}</th>
                     <th>{{ "To"|t('super-mailer') }}</th>
                     <th>{{ "Event"|t('super-mailer') }}</th>
-                    <th>{{ "Element"|t('super-mailer') }}</th>
+                    {# <th>{{ "Element"|t('super-mailer') }}</th> #}
                     <th>{{ "Date"|t('app') }}</th>
                     <th>{{ "Actions"|t('app') }}</th>
                 </tr>
@@ -57,7 +130,10 @@
                         <td>
                             <strong><a href="{{ cpUrl("super-mailer/logs/#{log.id}") }}">{{ log.subject ?: "No subject"|t('super-mailer') }}</a></strong>
                             {% if log.status == 'failed' and log.error %}
-                                <pre class="error smalltext" style="margin-top:4px;white-space:pre-wrap;">{{ log.error }}</pre>
+                                {% set errorSummary = log.error|striptags|replace({"\r\n": " ", "\n": " ", "\r": " "})|trim %}
+                                <div class="super-mailer-log-index-error smalltext">
+                                    {{ errorSummary|length > 180 ? errorSummary|slice(0, 180) ~ '...' : errorSummary }}
+                                </div>
                             {% endif %}
                         </td>
                         <td>
@@ -70,27 +146,27 @@
                         <td>
                             <code>{{ log.eventClass }}::{{ log.eventName }}</code>
                         </td>
-                        <td>
+                        {# <td>
                             {% if log.elementType and log.elementId %}
                                 <code>{{ log.elementType }}</code>
                                 <div class="light">#{{ log.elementId }}</div>
                             {% else %}
                                 <span class="light">{{ "None"|t('super-mailer') }}</span>
                             {% endif %}
-                        </td>
+                        </td> #}
                         <td>{{ log.dateCreated|datetime('short') }}</td>
                         <td>
                             <div class="buttons">
                                 <form method="post" accept-charset="UTF-8" style="display:inline-block;" onsubmit="return confirm('{{ 'Queue this email for resend?'|t('super-mailer')|e('js') }}');">
                                     {{ actionInput('super-mailer/logs/resend') }}
-                                    {{ redirectInput('super-mailer/logs') }}
+                                    {{ redirectInput(craft.app.request.fullPath) }}
                                     {{ csrfInput() }}
                                     {{ hiddenInput('singleLogId', log.id) }}
                                     <button type="submit" class="btn small">{{ "Resend"|t('super-mailer') }}</button>
                                 </form>
                                 <form method="post" accept-charset="UTF-8" style="display:inline-block;" onsubmit="return confirm('{{ 'Delete this email log?'|t('super-mailer')|e('js') }}');">
                                     {{ actionInput('super-mailer/logs/delete') }}
-                                    {{ redirectInput('super-mailer/logs') }}
+                                    {{ redirectInput(craft.app.request.fullPath) }}
                                     {{ csrfInput() }}
                                     {{ hiddenInput('singleLogId', log.id) }}
                                     <button type="submit" class="btn small">{{ "Delete"|t('app') }}</button>
@@ -101,6 +177,34 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        {% if pagination.totalPages > 1 %}
+            <nav class="super-mailer-log-pagination">
+                {% set previousPage = pagination.currentPage - 1 %}
+                {% set nextPage = pagination.currentPage + 1 %}
+                {% if previousPage >= 1 %}
+                    <a class="btn small" href="{{ cpUrl('super-mailer/logs', filterParams|merge({ page: previousPage })) }}">{{ "Previous"|t('app') }}</a>
+                {% else %}
+                    <button type="button" class="btn small disabled" disabled>{{ "Previous"|t('app') }}</button>
+                {% endif %}
+
+                {% for page in 1..pagination.totalPages %}
+                    {% if page == pagination.currentPage %}
+                        <span class="btn small active">{{ page }}</span>
+                    {% elseif page == 1 or page == pagination.totalPages or (page >= pagination.currentPage - 2 and page <= pagination.currentPage + 2) %}
+                        <a class="btn small" href="{{ cpUrl('super-mailer/logs', filterParams|merge({ page: page })) }}">{{ page }}</a>
+                    {% elseif page == pagination.currentPage - 3 or page == pagination.currentPage + 3 %}
+                        <span class="light">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if nextPage <= pagination.totalPages %}
+                    <a class="btn small" href="{{ cpUrl('super-mailer/logs', filterParams|merge({ page: nextPage })) }}">{{ "Next"|t('app') }}</a>
+                {% else %}
+                    <button type="button" class="btn small disabled" disabled>{{ "Next"|t('app') }}</button>
+                {% endif %}
+            </nav>
+        {% endif %}
 
         {% js %}
             (() => {
@@ -156,7 +260,7 @@
         {% endjs %}
     {% else %}
         <div class="zilch">
-            {{ "No email logs yet."|t('super-mailer') }}
+            {{ "No email logs match the current filters."|t('super-mailer') }}
         </div>
     {% endif %}
 {% endblock %}

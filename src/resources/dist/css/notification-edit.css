@@ -419,6 +419,39 @@
     gap: 18px;
 }
 
+.super-mailer-log-index-error {
+    margin-top: 4px;
+    color: var(--error-color);
+}
+
+.super-mailer-log-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+    align-items: end;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 14px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 6px;
+    background: var(--gray-050);
+}
+
+.super-mailer-log-filters .field {
+    margin: 0;
+}
+
+.super-mailer-log-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 18px;
+}
+
+.super-mailer-log-pagination .active {
+    font-weight: 700;
+}
+
 .super-mailer-log-hero,
 .super-mailer-log-card {
     border: 1px solid var(--hairline-color);
@@ -630,6 +663,15 @@
     .super-mailer-log-status-pill,
     .super-mailer-log-card {
         margin-top: 14px;
+    }
+
+    .super-mailer-log-filters {
+        display: block;
+    }
+
+    .super-mailer-log-filters .field,
+    .super-mailer-log-filters .buttons {
+        margin-top: 10px;
     }
 
     .super-mailer-log-definition-list > div {

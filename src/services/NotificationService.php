@@ -159,6 +159,7 @@ class NotificationService extends Component
             $field = (string)($rule['field'] ?? '');
             $actual = $this->conditionValue($field, $context);
             $expectedValues = $this->conditionExpectedValues((string)($rule['value'] ?? ''));
+            $definition = $this->conditionFieldDefinition($notification, $field);
 
             if ($field === 'element.status') {
                 $actual = $this->normalizeStatusConditionValue($actual);
@@ -167,12 +168,15 @@ class NotificationService extends Component
                 ));
             }
 
+            $actualValues = $this->conditionActualValues($actual);
             $rules[] = [
                 'field' => $field,
                 'operator' => (string)($rule['operator'] ?? 'equals'),
                 'operatorLabel' => $this->conditionOperatorLabel((string)($rule['operator'] ?? 'equals')),
                 'expected' => $expectedValues,
-                'actual' => $actual,
+                'expectedDisplay' => $this->conditionDebugDisplay($definition, $expectedValues),
+                'actual' => $this->conditionDebugActual($actual),
+                'actualDisplay' => $this->conditionDebugDisplay($definition, $actualValues),
                 'passed' => $this->conditionRulePasses($rule, $context),
             ];
         }
@@ -206,8 +210,99 @@ class NotificationService extends Component
             'contains' => Craft::t('super-mailer', 'contains'),
             'notContains' => Craft::t('super-mailer', 'does not contain'),
             'notEquals' => Craft::t('super-mailer', 'is not'),
+            'greaterThan' => Craft::t('super-mailer', 'greater than'),
+            'lessThan' => Craft::t('super-mailer', 'less than'),
+            'greaterThanOrEquals' => Craft::t('super-mailer', 'greater than or equal to'),
+            'lessThanOrEquals' => Craft::t('super-mailer', 'less than or equal to'),
+            'empty' => Craft::t('super-mailer', 'is empty'),
+            'notEmpty' => Craft::t('super-mailer', 'is not empty'),
             default => Craft::t('super-mailer', 'is'),
         };
+    }
+
+    /**
+     * Normalizes a raw condition value for readable preview/debug output.
+     *
+     * @param mixed $actual Raw condition value.
+     * @return mixed Debug-friendly value.
+     */
+    private function conditionDebugActual(mixed $actual): mixed
+    {
+        $values = $this->conditionActualValues($actual);
+        if (!$values) {
+            return null;
+        }
+
+        return count($values) === 1 ? $values[0] : $values;
+    }
+
+    /**
+     * Returns the condition field metadata for a configured rule when available.
+     *
+     * @param MailerNotification $notification Notification being debugged.
+     * @param string $field Condition field handle.
+     * @return array|null Condition field metadata from the selected event.
+     */
+    private function conditionFieldDefinition(MailerNotification $notification, string $field): ?array
+    {
+        foreach (Plugin::getInstance()->getEvents()->getEvents() as $event) {
+            if ($event['class'] !== $notification->eventClass || $event['eventName'] !== $notification->eventName) {
+                continue;
+            }
+
+            foreach ($event['conditionFields'] ?? [] as $definition) {
+                if (($definition['value'] ?? null) === $field) {
+                    return $definition;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Formats normalized condition values for preview/debug display.
+     *
+     * @param array|null $definition Condition field metadata.
+     * @param array $values Normalized comparison values.
+     * @return string|null Human-readable display value.
+     */
+    private function conditionDebugDisplay(?array $definition, array $values): ?string
+    {
+        if (!$values) {
+            return null;
+        }
+
+        return implode(', ', array_map(
+            fn(string $value): string => $this->conditionDebugValueLabel($definition, $value),
+            $values
+        ));
+    }
+
+    /**
+     * Resolves a stored condition value to its configured option or user label when possible.
+     *
+     * @param array|null $definition Condition field metadata.
+     * @param string $value Stored comparison value.
+     * @return string Label for the value.
+     */
+    private function conditionDebugValueLabel(?array $definition, string $value): string
+    {
+        foreach (($definition['options'] ?? []) as $option) {
+            if ((string)($option['value'] ?? '') === $value) {
+                return (string)($option['label'] ?? $value);
+            }
+        }
+
+        if (($definition['type'] ?? null) === 'author' && ctype_digit($value)) {
+            $user = Craft::$app->getUsers()->getUserById((int)$value);
+            if ($user) {
+                $label = trim((string)$user->fullName);
+                return $label !== '' ? $label : (string)$user->email;
+            }
+        }
+
+        return $value;
     }
 
     /**
@@ -278,6 +373,14 @@ class NotificationService extends Component
 
         $operator = (string)($rule['operator'] ?? 'equals');
 
+        if ($operator === 'empty') {
+            return $this->conditionValueIsEmpty($actual);
+        }
+
+        if ($operator === 'notEmpty') {
+            return !$this->conditionValueIsEmpty($actual);
+        }
+
         if ($operator === 'contains') {
             return (bool)array_intersect($actualValues, $expectedValues);
         }
@@ -288,9 +391,87 @@ class NotificationService extends Component
 
         $expected = (string)($expectedValues[0] ?? '');
 
+        if (in_array($operator, ['greaterThan', 'lessThan', 'greaterThanOrEquals', 'lessThanOrEquals'], true)) {
+            $actualNumber = $this->conditionNumericValue($actual);
+            $expectedNumber = is_numeric($expected) ? (float)$expected : null;
+            if ($actualNumber === null || $expectedNumber === null) {
+                return false;
+            }
+
+            return match ($operator) {
+                'greaterThan' => $actualNumber > $expectedNumber,
+                'lessThan' => $actualNumber < $expectedNumber,
+                'greaterThanOrEquals' => $actualNumber >= $expectedNumber,
+                'lessThanOrEquals' => $actualNumber <= $expectedNumber,
+                default => false,
+            };
+        }
+
         $matches = in_array($expected, $actualValues, true);
 
         return $operator === 'notEquals' ? !$matches : $matches;
+    }
+
+    /**
+     * Determines whether a condition value should count as empty for empty/not-empty operators.
+     *
+     * @param mixed $actual Raw condition value.
+     * @return bool Whether the value is empty.
+     */
+    private function conditionValueIsEmpty(mixed $actual): bool
+    {
+        if ($actual === null || $actual === '') {
+            return true;
+        }
+
+        if (is_object($actual) && property_exists($actual, 'value')) {
+            return $actual->value === null || $actual->value === '';
+        }
+
+        if (is_array($actual) || $actual instanceof \Countable) {
+            return count($actual) === 0;
+        }
+
+        if ($actual instanceof \Traversable) {
+            foreach ($actual as $_) {
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Extracts a float from scalar or money-like values for numeric comparisons.
+     *
+     * @param mixed $actual Raw condition value.
+     * @return float|null Numeric value, or null when the value cannot be compared numerically.
+     */
+    private function conditionNumericValue(mixed $actual): ?float
+    {
+        if (is_numeric($actual)) {
+            return (float)$actual;
+        }
+
+        if (is_object($actual) && method_exists($actual, 'getAmount')) {
+            $decimal = class_exists(\craft\helpers\MoneyHelper::class)
+                ? \craft\helpers\MoneyHelper::toDecimal($actual)
+                : false;
+            if ($decimal !== false && is_numeric($decimal)) {
+                return (float)$decimal;
+            }
+
+            $amount = $actual->getAmount();
+            return is_numeric($amount) ? (float)$amount : null;
+        }
+
+        if (is_object($actual) && property_exists($actual, 'amount') && is_numeric($actual->amount)) {
+            return (float)$actual->amount;
+        }
+
+        return null;
     }
 
     /**
@@ -337,11 +518,16 @@ class NotificationService extends Component
 
         if (str_starts_with($field, 'field:')) {
             $handle = substr($field, 6);
+            $objectValue = $this->elementPropertyValue($elementObject, $handle);
+            if ($objectValue !== null) {
+                return $objectValue;
+            }
+
             if (array_key_exists($handle, $element['fields'] ?? [])) {
                 return $element['fields'][$handle];
             }
 
-            return $this->elementPropertyValue($elementObject, $handle);
+            return null;
         }
 
         if (str_starts_with($field, 'element.')) {
@@ -415,6 +601,40 @@ class NotificationService extends Component
             return [$actual->format('c')];
         }
 
+        if (is_object($actual) && method_exists($actual, 'getCountryCode')) {
+            $countryCode = $actual->getCountryCode();
+            return $countryCode !== null && $countryCode !== '' ? [(string)$countryCode] : [];
+        }
+
+        if (is_object($actual) && method_exists($actual, 'getAmount')) {
+            $decimal = class_exists(\craft\helpers\MoneyHelper::class)
+                ? \craft\helpers\MoneyHelper::toDecimal($actual)
+                : false;
+            if ($decimal !== false && is_numeric($decimal)) {
+                return [(string)$decimal];
+            }
+
+            $amount = $actual->getAmount();
+            return is_numeric($amount) ? [(string)$amount] : [];
+        }
+
+        if (is_object($actual) && property_exists($actual, 'value')) {
+            return [(string)($actual->value ?? '')];
+        }
+
+        if (is_object($actual) && method_exists($actual, 'getOptions')) {
+            $values = [];
+            foreach ($actual->getOptions() as $option) {
+                if (($option->selected ?? false) && ($option->value ?? null) !== null && $option->value !== '') {
+                    $values[] = (string)$option->value;
+                }
+            }
+
+            if ($values) {
+                return array_values(array_unique($values));
+            }
+        }
+
         if ($actual instanceof \Traversable) {
             $values = [];
             foreach ($actual as $value) {
@@ -437,12 +657,9 @@ class NotificationService extends Component
             return array_values(array_unique($values));
         }
 
-        if (is_object($actual) && property_exists($actual, 'value') && $actual->value !== null) {
-            return [(string)$actual->value];
-        }
-
         if ($actual instanceof \Stringable) {
-            return [(string)$actual];
+            $value = (string)$actual;
+            return $value !== '' ? [$value] : [];
         }
 
         return [];

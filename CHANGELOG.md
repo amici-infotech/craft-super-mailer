@@ -45,10 +45,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added - Dynamic Conditions
 - Added event-aware condition field metadata so the condition table changes based on the selected event and primary element type.
-- Added automatic condition filters from supported element field layouts, including option lists for dropdown, radio, checkbox, and multi-select fields.
+- Added automatic condition filters from supported element field layouts, limited to reliably comparable field types such as lightswitch, option-style, country, email, plain text, money, and number fields.
 - Added selector-style options for practical element filters such as sites, entry sections, entry types, category groups, form handles, submission forms, submission statuses, Commerce product types, Commerce stores, order statuses, subscription plans, and gateways.
 - Added curated Commerce condition filters for products, variants, orders, donations, and subscriptions.
-- Added `is not` and `does not contain` operators for scalar and multi-value condition rows.
+- Added `is not`, `does not contain`, numeric greater/less operators, and empty/not-empty operators for condition rows.
 - Added Craft-style drag handles for reordering condition rows.
 - Added operator labels to the preview condition debug table.
 
@@ -61,6 +61,7 @@ All notable changes to this project will be documented in this file.
 - Submission events expose focused filters for status, form, and user while hiding request/tracking/internal fields.
 - Commerce events expose focused business filters and hide internal/default/calculated properties.
 - Toggle-style condition rows no longer show a comparison dropdown because the switch itself represents the expected value.
+- Empty and not-empty condition rows hide the value input because no comparison value is needed.
 - Preview render error blocks now have clearer spacing from the rendered subject and body sections.
 
 ### Fixed - Dynamic Conditions
